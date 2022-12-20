@@ -1,0 +1,18 @@
+module_name: "TCM"
+
+buckets:
+    low_frequency_tcm:
+        frequency_hz: 100
+        parameters:
+            tcm_gear_position:
+                ADC: ADC1_IN15
+                sensor: linear_pos_sensor_5
+                samples_buffered: 1
+            tcm_shifter_position:
+                ADC: ADC1_IN8
+                sensor: linear_pos_sensor_50
+                samples_buffered: 1
+            tcm_clutch_position:
+                ADC: ADC2_IN9
+                sensor: linear_pos_sensor_50
+                samples_buffered: 1
