@@ -46,19 +46,19 @@ void update_car_shift_struct(void)
 // clutch_task
 //  for use in the main task. Sets the slow and fast drop accordingly and handles
 //  clutch position if in ST_IDLE
-void clutch_task(U8_CAN_STRUCT clutch, U8_CAN_STRUCT slow_clutch, Main_States_t car_state, bool anti_stall_active)
+void clutch_task(U8_CAN_STRUCT fast_clutch, U8_CAN_STRUCT slow_clutch, Main_States_t car_state, bool anti_stall_active)
 {
 	static bool using_slow_drop = false;
 	// normal clutch button must not be pressed when using slow drop. Fast drop is
 	// given priority
-	if (clutch.data) using_slow_drop = false;
+	if (fast_clutch.data) using_slow_drop = false;
 
 	// if the slow drop button is pressed latch the slow drop
 	else if (slow_clutch.data) using_slow_drop = true;
 
 	// If either clutch button pressed then enable solenoid. Always turn it on regardless of
 	// if we are shifting or not
-	if (clutch.data || slow_clutch.data)
+	if (fast_clutch.data || slow_clutch.data)
 	{
 		set_clutch_solenoid(SOLENOID_ON);
 		return;
@@ -67,7 +67,7 @@ void clutch_task(U8_CAN_STRUCT clutch, U8_CAN_STRUCT slow_clutch, Main_States_t 
 	// If neither clutch button pressed and we are in IDLE and not in anti stall
 	// close clutch solenoid. This will cause clutch presses to latch to the end
 	// of a shift
-	if (!(clutch.data || slow_clutch.data)
+	if (!(fast_clutch.data || slow_clutch.data)
 			&& car_state == ST_IDLE && !anti_stall_active)
 	{
 		set_clutch_solenoid(SOLENOID_OFF);
@@ -97,10 +97,10 @@ void clutch_task(U8_CAN_STRUCT clutch, U8_CAN_STRUCT slow_clutch, Main_States_t 
 // check_buttons_and_set_clutch_sol
 //  for use of clutch during shifting. This will make sure the driver is not pressing
 //  one of the clutch buttons before closing the clutch
-void check_buttons_and_set_clutch_sol(solenoid_position_t position, U8_CAN_STRUCT clutch, U8_CAN_STRUCT slow_clutch)
+void check_buttons_and_set_clutch_sol(solenoid_position_t position, U8_CAN_STRUCT fast_clutch, U8_CAN_STRUCT slow_clutch)
 {
 	// If close clutch request comes in when driver is holding button do not drop clutch
-	if (position == SOLENOID_OFF && (clutch.data
+	if (position == SOLENOID_OFF && (fast_clutch.data
 			                         || slow_clutch.data) )
 	{
 		set_clutch_solenoid(SOLENOID_ON);
@@ -154,10 +154,10 @@ void reach_target_RPM_spark_cut(uint32_t target_rpm)
 //  check if we need to open anti-stall based on the current state of the engine.
 //  will also handle latching the anti-stall state after an event until a clutch
 //  button is pressed
-bool anti_stall(U8_CAN_STRUCT clutch, U8_CAN_STRUCT slow_clutch, gear_t current_gear)
+bool anti_stall(U8_CAN_STRUCT fast_clutch, U8_CAN_STRUCT slow_clutch, gear_t current_gear)
 {
 	// the only way to reset anti stall is to press the clutch button
-	if (slow_clutch.data || clutch.data)
+	if (slow_clutch.data || fast_clutch.data)
 	{
 		return false;
 	}
@@ -309,14 +309,14 @@ uint32_t calc_target_RPM(gear_t target_gear)
 
 // validate_target_RPM
 //  check if an inputed RPM is within the acceptable range
-bool validate_target_RPM(uint32_t target_rpm, gear_t target_gear, U8_CAN_STRUCT clutch, U8_CAN_STRUCT slow_clutch)
+bool validate_target_RPM(uint32_t target_rpm, gear_t target_gear, U8_CAN_STRUCT fast_clutch, U8_CAN_STRUCT slow_clutch)
 {
 	// If we are getting into ERROR_GEAR or NEUTRAL or clutch button pressed valid shift
 	// Example we are rolling at 2mph and driver is holding clutch and wants to shift into
 	// 5th. Should be allowed and if they drop clutch then anti stall kicks in
 	if (	target_gear == ERROR_GEAR 	||
 			target_gear == NEUTRAL 		||
-			clutch.data ||
+			fast_clutch.data ||
 			slow_clutch.data )
 	{
 		return true;
@@ -334,13 +334,13 @@ bool validate_target_RPM(uint32_t target_rpm, gear_t target_gear, U8_CAN_STRUCT 
 // calc_validate_upshift
 //  will check if an upshift is valid in the current state of the car. Will also
 //  set the target gear and target RPM if the shift is valid
-bool calc_validate_upshift(gear_t current_gear, U8_CAN_STRUCT clutch, U8_CAN_STRUCT slow_clutch)
+bool calc_validate_upshift(gear_t current_gear, U8_CAN_STRUCT fast_clutch, U8_CAN_STRUCT slow_clutch)
 {
 	switch (current_gear)
 	{
 	case NEUTRAL:
 		// Clutch must be pressed to go from NEUTRAL -> 1st
-		if (clutch.data || slow_clutch.data)
+		if (fast_clutch.data || slow_clutch.data)
 		{
 			car_shift_data.target_RPM = 0;
 			car_shift_data.target_gear = GEAR_1;
@@ -373,7 +373,7 @@ bool calc_validate_upshift(gear_t current_gear, U8_CAN_STRUCT clutch, U8_CAN_STR
 // calc_validate_downshift
 //  will check if an downshift is valid in the current state of the car. Will also
 //  set the target gear and target RPM if the shift is valid
-bool calc_validate_downshift(gear_t current_gear, U8_CAN_STRUCT clutch, U8_CAN_STRUCT slow_clutch)
+bool calc_validate_downshift(gear_t current_gear, U8_CAN_STRUCT fast_clutch, U8_CAN_STRUCT slow_clutch)
 {
 	switch (current_gear)
 	{

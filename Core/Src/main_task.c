@@ -136,7 +136,7 @@ int main_task(void)
 
 	// handle the clutch based on the state of the car and the buttons
 	//TODO: rewrite for new CAN buttons
-	clutch_task(sw_clutch_fast, sw_clutch_slow, car_Main_State, car_shift_data.anti_stall);
+	clutch_task(fast_clutch, slow_clutch, car_Main_State, car_shift_data.anti_stall);
 
 	switch (car_Main_State)
 	{
@@ -175,10 +175,10 @@ int main_task(void)
 
 		// start a downshift if there is one pending. This means that a new
 		// shift can be queued during the last shift
-		if (sw_downshift.data)
+		if (downshift.data)
 		{
 			sw_downshift.data = 0;
-			if (calc_validate_downshift(car_shift_data.current_gear, sw_clutch_fast, sw_clutch_slow))
+			if (calc_validate_downshift(car_shift_data.current_gear, fast_clutch, slow_clutch))
 			{
 				car_Main_State = ST_HDL_DOWNSHIFT;
 				car_Downshift_State = ST_D_BEGIN_SHIFT;
@@ -186,10 +186,10 @@ int main_task(void)
 		}
 
 		// same for upshift. Another shift can be queued
-		if (sw_upshift.data)
+		if (upshift.data)
 		{
 			sw_upshift.data = 0;
-			if (calc_validate_upshift(car_shift_data.current_gear, sw_clutch_fast, sw_clutch_slow))
+			if (calc_validate_upshift(car_shift_data.current_gear, fast_clutch, slow_clutch))
 			{
 				car_Main_State = ST_HDL_UPSHIFT;
 				car_Upshift_State = ST_U_BEGIN_SHIFT;
