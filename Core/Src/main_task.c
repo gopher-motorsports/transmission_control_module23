@@ -177,7 +177,7 @@ int main_task(void)
 		// shift can be queued during the last shift
 		if (downshift.data)
 		{
-			sw_downshift.data = 0;
+			downshift.data = 0;
 			if (calc_validate_downshift(car_shift_data.current_gear, fast_clutch, slow_clutch))
 			{
 				car_Main_State = ST_HDL_DOWNSHIFT;
@@ -188,7 +188,7 @@ int main_task(void)
 		// same for upshift. Another shift can be queued
 		if (upshift.data)
 		{
-			sw_upshift.data = 0;
+			upshift.data = 0;
 			if (calc_validate_upshift(car_shift_data.current_gear, fast_clutch, slow_clutch))
 			{
 				car_Main_State = ST_HDL_UPSHIFT;
