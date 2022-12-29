@@ -55,40 +55,40 @@ int main_task(void)
 	update_and_queue_param_u8(&tcm_using_clutch, car_shift_data.using_clutch);
 	update_and_queue_param_u8(&tcm_anti_stall, car_shift_data.anti_stall);
 
-	// logic for sending the current state of the shifts
+	// Logic for sending the current state of the shifts
 	switch (car_Main_State)
 	{
 	default:
 	case ST_IDLE:
-		// not shifting, send 0
+		// Not shifting, send 0
 		update_and_queue_param_u8(&tcm_shift_state, 0);
 		break;
 
 	case ST_HDL_UPSHIFT:
-		// send the upshift state
+		// Send the upshift state
 		update_and_queue_param_u8(&tcm_shift_state, car_Upshift_State);
 		break;
 
 	case ST_HDL_DOWNSHIFT:
-		// send the downshift state
+		// Send the downshift state
 		update_and_queue_param_u8(&tcm_shift_state, car_Downshift_State);
 		break;
 	}
 
-	// check for the lap timer signal. Use logic to make sure a clean signal
-	// is held to make it easier to send to the display
+	// Check for the lap timer signal. Use logic to make sure a clean signal
+	// Is held to make it easier to send to the display
 	static uint32_t last_lap_beacon = 0;
 	if (HAL_GetTick() - last_lap_beacon <= MIN_LAP_TIME_ms)
 	{
-		// keep the lap beacon at high to make a clean signal
+		// Keep the lap beacon at high to make a clean signal
 		update_and_queue_param_u8(&tcm_lap_timer, 1);
 	}
 	else
 	{
-		// there has not been a new lap within the buffer zone
+		// There has not been a new lap within the buffer zone
 		if (!tcm_lap_timer.data)
 		{
-			// a new lap has been detected
+			// A new lap has been detected
 			update_and_queue_param_u8(&tcm_lap_timer, 1);
 			last_lap_time = HAL_GetTick() - last_lap_beacon;
 			last_fastest_delta_time = last_lap_time - fastest_lap_time;
@@ -100,7 +100,7 @@ int main_task(void)
 		}
 		else
 		{
-			// no new lap, keep sending low
+			// No new lap, keep sending low
 			update_and_queue_param_u8(&tcm_lap_timer, 0);
 		}
 	}
@@ -110,11 +110,11 @@ int main_task(void)
 	// Update shift struct with relevant data
 	update_car_shift_struct();
 
-	// gear calculation handling
+	// Gear calculation handling
 	update_wheel_arr();
 	update_rpm_arr();
 
-	// only check the gear every 25ms
+	// Only check the gear GEAR_UPDATE_TIME_ms
 	static uint32_t last_gear_update = 0;
 	if (HAL_GetTick() - last_gear_update >= GEAR_UPDATE_TIME_ms)
 	{
@@ -422,7 +422,6 @@ static void run_downshift_sm(void)
 		begin_shift_tick = HAL_GetTick();
 		set_downshift_solenoid(SOLENOID_ON);
 
-		// we will always be using the clutch for downshifting
 		car_shift_data.using_clutch = true; // EXPIREMENTAL: Uncomment the next line to only clutch during a downshift if the clutch is held during the start of the shift
 		//car_shift_data.using_clutch = (car_buttons.clutch_fast_button || car_buttons.clutch_slow_button);
 		set_clutch_solenoid(car_shift_data.using_clutch ? SOLENOID_ON : SOLENOID_OFF);
