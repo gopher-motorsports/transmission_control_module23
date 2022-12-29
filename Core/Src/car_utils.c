@@ -8,7 +8,7 @@
 #include <math.h>
 #include "car_utils.h"
 #include "shift_parameters.h"
-#include "DAM.h"
+#include "gopher_sense.h"
 
 extern TIM_HandleTypeDef htim2;
 
@@ -51,14 +51,14 @@ void clutch_task(U8_CAN_STRUCT fast_clutch, U8_CAN_STRUCT slow_clutch, Main_Stat
 	static bool using_slow_drop = false;
 	// normal clutch button must not be pressed when using slow drop. Fast drop is
 	// given priority
-	if (sw_clutch_fast.data) using_slow_drop = false;
+	if (fast_clutch.data) using_slow_drop = false;
 
 	// if the slow drop button is pressed latch the slow drop
-	else if (sw_clutch_slow.data) using_slow_drop = true;
+	else if (slow_clutch.data) using_slow_drop = true;
 
 	// If either clutch button pressed then enable solenoid. Always turn it on regardless of
 	// if we are shifting or not
-	if (sw_clutch_fast.data || sw_clutch_slow.data)
+	if (fast_clutch.data || slow_clutch.data)
 	{
 		set_clutch_solenoid(SOLENOID_ON);
 		return;
@@ -67,7 +67,7 @@ void clutch_task(U8_CAN_STRUCT fast_clutch, U8_CAN_STRUCT slow_clutch, Main_Stat
 	// If neither clutch button pressed and we are in IDLE and not in anti stall
 	// close clutch solenoid. This will cause clutch presses to latch to the end
 	// of a shift
-	if (!(sw_clutch_fast.data || sw_clutch_slow.data)
+	if (!(fast_clutch.data || slow_clutch.data)
 			&& car_state == ST_IDLE && !anti_stall_active)
 	{
 		set_clutch_solenoid(SOLENOID_OFF);
@@ -100,8 +100,8 @@ void clutch_task(U8_CAN_STRUCT fast_clutch, U8_CAN_STRUCT slow_clutch, Main_Stat
 void check_buttons_and_set_clutch_sol(solenoid_position_t position, U8_CAN_STRUCT fast_clutch, U8_CAN_STRUCT slow_clutch)
 {
 	// If close clutch request comes in when driver is holding button do not drop clutch
-	if (position == SOLENOID_OFF && (sw_clutch_fast.data
-			                         || sw_clutch_slow.data) )
+	if (position == SOLENOID_OFF && (fast_clutch.data
+			                         || slow_clutch.data) )
 	{
 		set_clutch_solenoid(SOLENOID_ON);
 		return;
@@ -157,7 +157,7 @@ void reach_target_RPM_spark_cut(uint32_t target_rpm)
 bool anti_stall(U8_CAN_STRUCT fast_clutch, U8_CAN_STRUCT slow_clutch, gear_t current_gear)
 {
 	// the only way to reset anti stall is to press the clutch button
-	if (sw_clutch_slow.data || sw_clutch_fast.data)
+	if (slow_clutch.data || fast_clutch.data)
 	{
 		return false;
 	}
@@ -316,8 +316,8 @@ bool validate_target_RPM(uint32_t target_rpm, gear_t target_gear, U8_CAN_STRUCT 
 	// 5th. Should be allowed and if they drop clutch then anti stall kicks in
 	if (	target_gear == ERROR_GEAR 	||
 			target_gear == NEUTRAL 		||
-			sw_clutch_fast.data ||
-			sw_clutch_slow.data )
+			fast_clutch.data ||
+			slow_clutch.data )
 	{
 		return true;
 	}
@@ -340,7 +340,7 @@ bool calc_validate_upshift(gear_t current_gear, U8_CAN_STRUCT fast_clutch, U8_CA
 	{
 	case NEUTRAL:
 		// Clutch must be pressed to go from NEUTRAL -> 1st
-		if (sw_clutch_fast.data || sw_clutch_slow.data)
+		if (fast_clutch.data || slow_clutch.data)
 		{
 			car_shift_data.target_RPM = 0;
 			car_shift_data.target_gear = GEAR_1;
@@ -624,6 +624,11 @@ void set_downshift_solenoid(solenoid_position_t position)
 uint32_t get_RPM(void)
 {
 	return rpm_ecu.data;
+}
+
+float get_gear_pot_pos(void)
+{
+	return tcm_shifter_position.data;
 }
 
 float get_clutch_pot_pos(void)

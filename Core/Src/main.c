@@ -22,7 +22,7 @@
 #include "main_task.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "DAM.h"
+#include "gopher_sense.h"
 
 /* USER CODE END Includes */
 
@@ -127,7 +127,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
   HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
   init_main_task();
-  DAM_init(&hcan1, NULL, &hadc1, &hadc2, NULL, &htim10, DAM_LED_GPIO_Port, DAM_LED_Pin);
+  gsense_init(&hcan1, &hadc1, &hadc2, NULL, &htim10, DAM_LED_GPIO_Port, DAM_LED_Pin);
   /* USER CODE END 2 */
 
   /* Init scheduler */
