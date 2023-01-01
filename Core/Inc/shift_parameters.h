@@ -37,6 +37,7 @@
 #define CLUTCH_OPEN_POS_MM 27.0f
 #define CLUTCH_SLOW_DROP_FAST_TO_SLOW_EXTRA_MM 3.0f
 #define CLUTCH_OPEN_TIMEOUT_MS 300
+#define CLUTCHLESS_DOWNSHIFT 0
 
 // transmission, wheel speed, and RPM array defines
 #define RPM_ARRAY_SIZE 250

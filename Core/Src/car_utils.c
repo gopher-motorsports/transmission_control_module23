@@ -628,7 +628,7 @@ uint32_t get_RPM(void)
 
 float get_gear_pot_pos(void)
 {
-	return tcm_shifter_position.data;
+	return tcm_gear_position.data;
 }
 
 float get_clutch_pot_pos(void)

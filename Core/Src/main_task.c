@@ -420,10 +420,12 @@ static void run_downshift_sm(void)
 		// lever does not seem to be as important for downshifts, but still
 		// give some time for it
 		begin_shift_tick = HAL_GetTick();
+
 		set_downshift_solenoid(SOLENOID_ON);
 
-		car_shift_data.using_clutch = true; // EXPIREMENTAL: Uncomment the next line to only clutch during a downshift if the clutch is held during the start of the shift
+		car_shift_data.using_clutch = CLUTCHLESS_DOWNSHIFT ? false : true; // EXPIREMENTAL: Uncomment the next line to only clutch during a downshift if the clutch is held during the start of the shift
 		//car_shift_data.using_clutch = (car_buttons.clutch_fast_button || car_buttons.clutch_slow_button);
+
 		set_clutch_solenoid(car_shift_data.using_clutch ? SOLENOID_ON : SOLENOID_OFF);
 
 		// reset the shift parameters
