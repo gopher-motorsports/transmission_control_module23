@@ -35,7 +35,6 @@ void init_main_task()
 }
 
 
-
 int main_task(void)
 {
 	// Heartbeat LED
@@ -47,7 +46,7 @@ int main_task(void)
 	}
 
 	update_and_queue_param_u32(&tcm_target_rpm, car_shift_data.target_RPM);
-	update_and_queue_param_u8(&tcm_current_gear, car_shift_data.current_gear);
+	update_and_queue_param_float(&tcm_current_gear, ((float)car_shift_data.current_gear) / 2);
 	update_and_queue_param_u8(&tcm_target_gear, car_shift_data.target_gear);
 	update_and_queue_param_u8(&tcm_currently_moving, car_shift_data.currently_moving);
 	update_and_queue_param_u8(&tcm_successful_shift, car_shift_data.successful_shift);

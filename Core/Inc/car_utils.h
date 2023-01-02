@@ -14,13 +14,19 @@
 
 typedef enum
 {
-	NEUTRAL,
+	NEUTRAL = 0,
+	GEAR_0_5,
 	GEAR_1,
+	GEAR_1_5,
 	GEAR_2,
+	GEAR_2_5,
 	GEAR_3,
+	GEAR_3_5,
 	GEAR_4,
+	GEAR_4_5,
 	GEAR_5,
-	ERROR_GEAR
+	ERROR_GEAR,
+	NUM_GEARS
 } gear_t;
 
 typedef struct shift_struct

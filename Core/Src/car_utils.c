@@ -14,12 +14,20 @@ extern TIM_HandleTypeDef htim2;
 
 shift_struct_t car_shift_data = {.current_gear = ERROR_GEAR};
 
-float gear_ratios[5] = {
+const float gear_ratios[5] = {
 		GEAR_1_WHEEL_RATIO,
 		GEAR_2_WHEEL_RATIO,
 		GEAR_3_WHEEL_RATIO,
 		GEAR_4_WHEEL_RATIO,
 		GEAR_5_WHEEL_RATIO
+};
+const float GEAR_POT_DISTANCES_mm[] = {
+		NEUTRAL_DISTANCE_mm,
+		GEAR_1_DISTANCE_mm,
+		GEAR_2_DISTANCE_mm,
+		GEAR_3_DISTANCE_mm,
+		GEAR_4_DISTANCE_mm,
+		GEAR_5_DISTANCE_mm
 };
 
 // averaging RPM, wheel speed, and trans speed
@@ -180,100 +188,20 @@ float theoretical_rpm_arr[5];
 float temp1, temp2;
 
 // get_current_gear
-//  returns the current gear the car is in. This is done first by checking the neutral
-//  sensor, then by using the rear wheel speed to find the correct ratio from the
-//  RPM to the wheels. If a gear has been established, it is unlikely that we
-//  changed gears so use more samples and take the closest based on the ratio.
-//  If the gear is not established then the gear ratios must be closer to the gear
-//TODO: This should be rewritten with new sensor
+// Uses the positions declared in GEAR_POT_DISTANCES_mm which are set in shift_parameters.h
+// and interpolates between them to determine the gear state
+//TODO: TEST THIS BEFORE ATTEMPTING TO RUN - MATH IS PROBABLY WRONG
 gear_t get_current_gear(Main_States_t current_state)
 {
-	float minimum_rpm_difference = 15000.0f;
-	float temp_diff;
-	float ave_wheel_speed;
-	float ave_rpm;
-	float theoredical_rpm;
-	uint8_t best_gear = 0;
-
-	// If we are currently shifting just use the last know gear
-	if (current_state == ST_HDL_UPSHIFT || current_state == ST_HDL_DOWNSHIFT)
-	{
-		// no established gear during shifting
-		car_shift_data.gear_established = false;
-		return car_shift_data.current_gear;
-	}
-
-	//TODO: fix wuth new sensor
-//	// if the neutral sensor is reading we are in neutral
-//	if (read_neutral_sensor_pin())
-//	{
-//		// Neutral sensor means we have an established gear
-//		car_shift_data.gear_established = true;
-//		return NEUTRAL;
-//	}
-
-	// if the clutch is open return the last gear (shifting updates the current gear
-	// on a success so you should still be able to reasonably go up and down)
-	// same if we are not moving. We have no data in order to change the gear
-	if (clutch_open() || !car_shift_data.currently_moving)
-	{
-		// no change to established gear, if we were good before we are still good
-		// and vice versa
-		return car_shift_data.current_gear;
-	}
-
-	if (car_shift_data.gear_established)
-	{
-		// if the gear is established, use a much longer set of samples and take the
-		// closest gear
-		temp1 = ave_rpm = get_ave_rpm(GEAR_ESTABLISHED_NUM_SAMPLES_ms);
-		temp2 = ave_wheel_speed = get_ave_wheel_speed(GEAR_ESTABLISHED_NUM_SAMPLES_ms);
-		for (uint8_t c = 0; c < NUM_OF_GEARS; c++)
-		{
-			theoredical_rpm = ave_wheel_speed * gear_ratios[c];
-			temp_diff = fabs(theoredical_rpm - ave_rpm);
-			if (temp_diff < minimum_rpm_difference)
-			{
-				minimum_rpm_difference = temp_diff;
-				best_gear = c;
+	uint8_t gear_position = tcm_gear_position.data;
+	for(int i = 1; i < NUM_GEARS / 2; i++) {
+		if (gear_position <= GEAR_POT_DISTANCES_mm[i] + GEAR_POS_MARGIN_mm) {
+			if (gear_position <= GEAR_POT_DISTANCES_mm[i] - GEAR_POS_MARGIN_mm) {
+				return (gear_t)(i * 2 + 1);
 			}
-		}
-
-		// we have found the minimum difference. Just return this gear
-		return (gear_t)(best_gear + 1);
-	}
-	else
-	{
-		// if the gear is not established, we must be close enough to a gear to establish
-		// it. This will use a smaller subset of samples
-		ave_rpm = get_ave_rpm(GEAR_NOT_ESTABLISHED_NUM_SAMPLES_ms);
-		ave_wheel_speed = get_ave_wheel_speed(GEAR_NOT_ESTABLISHED_NUM_SAMPLES_ms);
-		for (uint8_t c = 0; c < NUM_OF_GEARS; c++)
-		{
-			theoredical_rpm = ave_wheel_speed * gear_ratios[c];
-			temp_diff = fabs(theoredical_rpm - ave_rpm);
-			if (temp_diff < minimum_rpm_difference)
-			{
-				minimum_rpm_difference = temp_diff;
-				best_gear = c;
-			}
-		}
-
-		// we have found the minimum difference. If it is within tolerance then
-		// return the gear and establish. Otherwise return error gear and do not
-		// establish
-		if (minimum_rpm_difference / ave_rpm <= GEAR_ESTABLISH_TOLERANCE_percent)
-		{
-			car_shift_data.gear_established = true;
-			return (gear_t)(best_gear + 1);
-		}
-		else
-		{
-			// no gear is good enough. Return error gear
-			return ERROR_GEAR;
+			return (gear_t)(i * 2);
 		}
 	}
-
 	// not sure how we got here. Return ERROR_GEAR and panic
 	return ERROR_GEAR;
 }
