@@ -45,6 +45,7 @@ int main_task(void)
 		HAL_GPIO_TogglePin(HEARTBEAT_GPIO_Port, HEARTBEAT_Pin);
 	}
 
+	update_and_queue_param_u8(&shift_mode, car_shift_data.shift_mode);
 	update_and_queue_param_u32(&tcm_target_rpm, car_shift_data.target_RPM);
 	update_and_queue_param_float(&tcm_current_gear, ((float)car_shift_data.current_gear) / 2);
 	update_and_queue_param_u8(&tcm_target_gear, car_shift_data.target_gear);
@@ -422,7 +423,7 @@ static void run_downshift_sm(void)
 
 		set_downshift_solenoid(SOLENOID_ON);
 
-		car_shift_data.using_clutch = CLUTCHLESS_DOWNSHIFT ? false : true; // EXPIREMENTAL: Uncomment the next line to only clutch during a downshift if the clutch is held during the start of the shift
+		car_shift_data.using_clutch = shift_mode.data != CLUTCHLESS_DOWNSHIFT; // EXPIREMENTAL: Uncomment the next line to only clutch during a downshift if the clutch is held during the start of the shift
 		//car_shift_data.using_clutch = (car_buttons.clutch_fast_button || car_buttons.clutch_slow_button);
 
 		set_clutch_solenoid(car_shift_data.using_clutch ? SOLENOID_ON : SOLENOID_OFF);
@@ -482,7 +483,8 @@ static void run_downshift_sm(void)
 			car_Downshift_State = ST_D_ENTER_GEAR;
 			begin_enter_gear_tick = HAL_GetTick();
 
-			// if we were not using the clutch before, start using it now
+			// if we were not using the clutch before, start using it now because
+			// otherwise we're probably going to fail the shift
 			car_shift_data.using_clutch = true;
 		}
 		break;

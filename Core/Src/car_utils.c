@@ -193,6 +193,10 @@ float temp1, temp2;
 //TODO: TEST THIS BEFORE ATTEMPTING TO RUN - MATH IS PROBABLY WRONG
 gear_t get_current_gear(Main_States_t current_state)
 {
+	// Search algorithm searches for if the gear position is less than a gear position distance
+	// plus the margin (0.1mm), and if it finds it, then checks if the position is right on the gear
+	// or between it and the last one by checking if the position is less than the declared
+	// distance minus the margin (0.1mm)
 	uint8_t gear_position = tcm_gear_position.data;
 	for(int i = 1; i < NUM_GEARS / 2; i++) {
 		if (gear_position <= GEAR_POT_DISTANCES_mm[i] + GEAR_POS_MARGIN_mm) {
@@ -217,6 +221,8 @@ uint32_t calc_target_RPM(gear_t target_gear)
 		return 0;
 	}
 
+	// Does not include in between gears as they will be caught by default and
+	// it shouldn't calculate.
 	switch (target_gear)
 	{
 	case GEAR_1:

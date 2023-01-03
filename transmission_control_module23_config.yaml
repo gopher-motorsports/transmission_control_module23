@@ -20,19 +20,31 @@ buckets:
                 ADC: NON_ADC
                 sensor: NON_ADC
                 samples_buffered: 1
-            tcm_target_gear:
+	    tcm_target_rpm
+		ADC: NON_ADC
+                sensor: NON_ADC
+                samples_buffered: 1
+            tcm_trans_rpm:
                 ADC: NON_ADC
                 sensor: NON_ADC
                 samples_buffered: 1
-			tcm_currently_moving:
+	    tcm_current_gear:
                 ADC: NON_ADC
                 sensor: NON_ADC
                 samples_buffered: 1
-            tcm_successful_shift:
+            tcm_currently_moving:
+                ADC: NON_ADC
+                sensor: NON_ADC
+                samples_buffered: 1
+            tcm_shift_state:
                 ADC: NON_ADC
                 sensor: NON_ADC
                 samples_buffered: 1
             tcm_using_clutch:
+                ADC: NON_ADC
+                sensor: NON_ADC
+                samples_buffered: 1
+            tcm_successful_shift:
                 ADC: NON_ADC
                 sensor: NON_ADC
                 samples_buffered: 1

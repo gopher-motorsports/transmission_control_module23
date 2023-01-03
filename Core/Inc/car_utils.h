@@ -29,6 +29,13 @@ typedef enum
 	NUM_GEARS
 } gear_t;
 
+typedef enum
+{
+	DEFAULT,
+	CLUTCHLESS_DOWNSHIFT,
+	TIME_BASED_SHIFT
+} shift_mode_t;
+
 typedef struct shift_struct
 {
 	uint32_t current_RPM;
@@ -40,6 +47,8 @@ typedef struct shift_struct
 
 	gear_t current_gear;
 	gear_t target_gear;
+
+	shift_mode_t shift_mode;
 
 	// Is the car moving?
 	bool currently_moving;
