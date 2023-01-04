@@ -8,18 +8,26 @@
 #include <math.h>
 #include "car_utils.h"
 #include "shift_parameters.h"
-#include "DAM.h"
+#include "gopher_sense.h"
 
 extern TIM_HandleTypeDef htim2;
 
 shift_struct_t car_shift_data = {.current_gear = ERROR_GEAR};
 
-float gear_ratios[5] = {
+const float gear_ratios[5] = {
 		GEAR_1_WHEEL_RATIO,
 		GEAR_2_WHEEL_RATIO,
 		GEAR_3_WHEEL_RATIO,
 		GEAR_4_WHEEL_RATIO,
 		GEAR_5_WHEEL_RATIO
+};
+const float GEAR_POT_DISTANCES_mm[] = {
+		NEUTRAL_DISTANCE_mm,
+		GEAR_1_DISTANCE_mm,
+		GEAR_2_DISTANCE_mm,
+		GEAR_3_DISTANCE_mm,
+		GEAR_4_DISTANCE_mm,
+		GEAR_5_DISTANCE_mm
 };
 
 // averaging RPM, wheel speed, and trans speed
@@ -51,14 +59,14 @@ void clutch_task(U8_CAN_STRUCT fast_clutch, U8_CAN_STRUCT slow_clutch, Main_Stat
 	static bool using_slow_drop = false;
 	// normal clutch button must not be pressed when using slow drop. Fast drop is
 	// given priority
-	if (sw_clutch_fast.data) using_slow_drop = false;
+	if (fast_clutch.data) using_slow_drop = false;
 
 	// if the slow drop button is pressed latch the slow drop
-	else if (sw_clutch_slow.data) using_slow_drop = true;
+	else if (slow_clutch.data) using_slow_drop = true;
 
 	// If either clutch button pressed then enable solenoid. Always turn it on regardless of
 	// if we are shifting or not
-	if (sw_clutch_fast.data || sw_clutch_slow.data)
+	if (fast_clutch.data || slow_clutch.data)
 	{
 		set_clutch_solenoid(SOLENOID_ON);
 		return;
@@ -67,7 +75,7 @@ void clutch_task(U8_CAN_STRUCT fast_clutch, U8_CAN_STRUCT slow_clutch, Main_Stat
 	// If neither clutch button pressed and we are in IDLE and not in anti stall
 	// close clutch solenoid. This will cause clutch presses to latch to the end
 	// of a shift
-	if (!(sw_clutch_fast.data || sw_clutch_slow.data)
+	if (!(fast_clutch.data || slow_clutch.data)
 			&& car_state == ST_IDLE && !anti_stall_active)
 	{
 		set_clutch_solenoid(SOLENOID_OFF);
@@ -100,8 +108,8 @@ void clutch_task(U8_CAN_STRUCT fast_clutch, U8_CAN_STRUCT slow_clutch, Main_Stat
 void check_buttons_and_set_clutch_sol(solenoid_position_t position, U8_CAN_STRUCT fast_clutch, U8_CAN_STRUCT slow_clutch)
 {
 	// If close clutch request comes in when driver is holding button do not drop clutch
-	if (position == SOLENOID_OFF && (sw_clutch_fast.data
-			                         || sw_clutch_slow.data) )
+	if (position == SOLENOID_OFF && (fast_clutch.data
+			                         || slow_clutch.data) )
 	{
 		set_clutch_solenoid(SOLENOID_ON);
 		return;
@@ -157,7 +165,7 @@ void reach_target_RPM_spark_cut(uint32_t target_rpm)
 bool anti_stall(U8_CAN_STRUCT fast_clutch, U8_CAN_STRUCT slow_clutch, gear_t current_gear)
 {
 	// the only way to reset anti stall is to press the clutch button
-	if (sw_clutch_slow.data || sw_clutch_fast.data)
+	if (slow_clutch.data || fast_clutch.data)
 	{
 		return false;
 	}
@@ -180,100 +188,24 @@ float theoretical_rpm_arr[5];
 float temp1, temp2;
 
 // get_current_gear
-//  returns the current gear the car is in. This is done first by checking the neutral
-//  sensor, then by using the rear wheel speed to find the correct ratio from the
-//  RPM to the wheels. If a gear has been established, it is unlikely that we
-//  changed gears so use more samples and take the closest based on the ratio.
-//  If the gear is not established then the gear ratios must be closer to the gear
-//TODO: This should be rewritten with new sensor
+// Uses the positions declared in GEAR_POT_DISTANCES_mm which are set in shift_parameters.h
+// and interpolates between them to determine the gear state
+//TODO: TEST THIS BEFORE ATTEMPTING TO RUN - MATH IS PROBABLY WRONG
 gear_t get_current_gear(Main_States_t current_state)
 {
-	float minimum_rpm_difference = 15000.0f;
-	float temp_diff;
-	float ave_wheel_speed;
-	float ave_rpm;
-	float theoredical_rpm;
-	uint8_t best_gear = 0;
-
-	// If we are currently shifting just use the last know gear
-	if (current_state == ST_HDL_UPSHIFT || current_state == ST_HDL_DOWNSHIFT)
-	{
-		// no established gear during shifting
-		car_shift_data.gear_established = false;
-		return car_shift_data.current_gear;
-	}
-
-	//TODO: fix wuth new sensor
-//	// if the neutral sensor is reading we are in neutral
-//	if (read_neutral_sensor_pin())
-//	{
-//		// Neutral sensor means we have an established gear
-//		car_shift_data.gear_established = true;
-//		return NEUTRAL;
-//	}
-
-	// if the clutch is open return the last gear (shifting updates the current gear
-	// on a success so you should still be able to reasonably go up and down)
-	// same if we are not moving. We have no data in order to change the gear
-	if (clutch_open() || !car_shift_data.currently_moving)
-	{
-		// no change to established gear, if we were good before we are still good
-		// and vice versa
-		return car_shift_data.current_gear;
-	}
-
-	if (car_shift_data.gear_established)
-	{
-		// if the gear is established, use a much longer set of samples and take the
-		// closest gear
-		temp1 = ave_rpm = get_ave_rpm(GEAR_ESTABLISHED_NUM_SAMPLES_ms);
-		temp2 = ave_wheel_speed = get_ave_wheel_speed(GEAR_ESTABLISHED_NUM_SAMPLES_ms);
-		for (uint8_t c = 0; c < NUM_OF_GEARS; c++)
-		{
-			theoredical_rpm = ave_wheel_speed * gear_ratios[c];
-			temp_diff = fabs(theoredical_rpm - ave_rpm);
-			if (temp_diff < minimum_rpm_difference)
-			{
-				minimum_rpm_difference = temp_diff;
-				best_gear = c;
+	// Search algorithm searches for if the gear position is less than a gear position distance
+	// plus the margin (0.1mm), and if it finds it, then checks if the position is right on the gear
+	// or between it and the last one by checking if the position is less than the declared
+	// distance minus the margin (0.1mm)
+	uint8_t gear_position = tcm_gear_position.data;
+	for(int i = 1; i < NUM_GEARS / 2; i++) {
+		if (gear_position <= GEAR_POT_DISTANCES_mm[i] + GEAR_POS_MARGIN_mm) {
+			if (gear_position <= GEAR_POT_DISTANCES_mm[i] - GEAR_POS_MARGIN_mm) {
+				return (gear_t)(i * 2 + 1);
 			}
-		}
-
-		// we have found the minimum difference. Just return this gear
-		return (gear_t)(best_gear + 1);
-	}
-	else
-	{
-		// if the gear is not established, we must be close enough to a gear to establish
-		// it. This will use a smaller subset of samples
-		ave_rpm = get_ave_rpm(GEAR_NOT_ESTABLISHED_NUM_SAMPLES_ms);
-		ave_wheel_speed = get_ave_wheel_speed(GEAR_NOT_ESTABLISHED_NUM_SAMPLES_ms);
-		for (uint8_t c = 0; c < NUM_OF_GEARS; c++)
-		{
-			theoredical_rpm = ave_wheel_speed * gear_ratios[c];
-			temp_diff = fabs(theoredical_rpm - ave_rpm);
-			if (temp_diff < minimum_rpm_difference)
-			{
-				minimum_rpm_difference = temp_diff;
-				best_gear = c;
-			}
-		}
-
-		// we have found the minimum difference. If it is within tolerance then
-		// return the gear and establish. Otherwise return error gear and do not
-		// establish
-		if (minimum_rpm_difference / ave_rpm <= GEAR_ESTABLISH_TOLERANCE_percent)
-		{
-			car_shift_data.gear_established = true;
-			return (gear_t)(best_gear + 1);
-		}
-		else
-		{
-			// no gear is good enough. Return error gear
-			return ERROR_GEAR;
+			return (gear_t)(i * 2);
 		}
 	}
-
 	// not sure how we got here. Return ERROR_GEAR and panic
 	return ERROR_GEAR;
 }
@@ -289,6 +221,8 @@ uint32_t calc_target_RPM(gear_t target_gear)
 		return 0;
 	}
 
+	// Does not include in between gears as they will be caught by default and
+	// it shouldn't calculate.
 	switch (target_gear)
 	{
 	case GEAR_1:
@@ -316,8 +250,8 @@ bool validate_target_RPM(uint32_t target_rpm, gear_t target_gear, U8_CAN_STRUCT 
 	// 5th. Should be allowed and if they drop clutch then anti stall kicks in
 	if (	target_gear == ERROR_GEAR 	||
 			target_gear == NEUTRAL 		||
-			sw_clutch_fast.data ||
-			sw_clutch_slow.data )
+			fast_clutch.data ||
+			slow_clutch.data )
 	{
 		return true;
 	}
@@ -340,7 +274,7 @@ bool calc_validate_upshift(gear_t current_gear, U8_CAN_STRUCT fast_clutch, U8_CA
 	{
 	case NEUTRAL:
 		// Clutch must be pressed to go from NEUTRAL -> 1st
-		if (sw_clutch_fast.data || sw_clutch_slow.data)
+		if (fast_clutch.data || slow_clutch.data)
 		{
 			car_shift_data.target_RPM = 0;
 			car_shift_data.target_gear = GEAR_1;
@@ -624,6 +558,11 @@ void set_downshift_solenoid(solenoid_position_t position)
 uint32_t get_RPM(void)
 {
 	return rpm_ecu.data;
+}
+
+float get_gear_pot_pos(void)
+{
+	return tcm_gear_position.data;
 }
 
 float get_clutch_pot_pos(void)

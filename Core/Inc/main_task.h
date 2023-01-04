@@ -68,7 +68,7 @@ typedef struct
 	uint32_t F_RETURN_LEVER;
 } logs_t;
 
-
+void init_main_task();
 int main_task(void);
 
 #define HEARTBEAT_LED_TIME_ms 500

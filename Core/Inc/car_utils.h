@@ -14,14 +14,27 @@
 
 typedef enum
 {
-	NEUTRAL,
+	NEUTRAL = 0,
+	GEAR_0_5,
 	GEAR_1,
+	GEAR_1_5,
 	GEAR_2,
+	GEAR_2_5,
 	GEAR_3,
+	GEAR_3_5,
 	GEAR_4,
+	GEAR_4_5,
 	GEAR_5,
-	ERROR_GEAR
+	ERROR_GEAR,
+	NUM_GEARS
 } gear_t;
+
+typedef enum
+{
+	DEFAULT,
+	CLUTCHLESS_DOWNSHIFT,
+	TIME_BASED_SHIFT
+} shift_mode_t;
 
 typedef struct shift_struct
 {
@@ -34,6 +47,8 @@ typedef struct shift_struct
 
 	gear_t current_gear;
 	gear_t target_gear;
+
+	shift_mode_t shift_mode;
 
 	// Is the car moving?
 	bool currently_moving;

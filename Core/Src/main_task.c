@@ -6,7 +6,7 @@
  */
 #include <main_task.h>
 #include "main.h"
-#include "DAM.h"
+#include "gopher_sense.h"
 #include "car_utils.h"
 #include "display.h"
 #include "shift_parameters.h"
@@ -35,7 +35,6 @@ void init_main_task()
 }
 
 
-
 int main_task(void)
 {
 	// Heartbeat LED
@@ -46,8 +45,9 @@ int main_task(void)
 		HAL_GPIO_TogglePin(HEARTBEAT_GPIO_Port, HEARTBEAT_Pin);
 	}
 
+	update_and_queue_param_u8(&shift_mode, car_shift_data.shift_mode);
 	update_and_queue_param_u32(&tcm_target_rpm, car_shift_data.target_RPM);
-	update_and_queue_param_u8(&tcm_current_gear, car_shift_data.current_gear);
+	update_and_queue_param_float(&tcm_current_gear, ((float)car_shift_data.current_gear) / 2);
 	update_and_queue_param_u8(&tcm_target_gear, car_shift_data.target_gear);
 	update_and_queue_param_u8(&tcm_currently_moving, car_shift_data.currently_moving);
 	update_and_queue_param_u8(&tcm_successful_shift, car_shift_data.successful_shift);
@@ -55,40 +55,40 @@ int main_task(void)
 	update_and_queue_param_u8(&tcm_using_clutch, car_shift_data.using_clutch);
 	update_and_queue_param_u8(&tcm_anti_stall, car_shift_data.anti_stall);
 
-	// logic for sending the current state of the shifts
+	// Logic for sending the current state of the shifts
 	switch (car_Main_State)
 	{
 	default:
 	case ST_IDLE:
-		// not shifting, send 0
+		// Not shifting, send 0
 		update_and_queue_param_u8(&tcm_shift_state, 0);
 		break;
 
 	case ST_HDL_UPSHIFT:
-		// send the upshift state
+		// Send the upshift state
 		update_and_queue_param_u8(&tcm_shift_state, car_Upshift_State);
 		break;
 
 	case ST_HDL_DOWNSHIFT:
-		// send the downshift state
+		// Send the downshift state
 		update_and_queue_param_u8(&tcm_shift_state, car_Downshift_State);
 		break;
 	}
 
-	// check for the lap timer signal. Use logic to make sure a clean signal
-	// is held to make it easier to send to the display
+	// Check for the lap timer signal. Use logic to make sure a clean signal
+	// Is held to make it easier to send to the display
 	static uint32_t last_lap_beacon = 0;
 	if (HAL_GetTick() - last_lap_beacon <= MIN_LAP_TIME_ms)
 	{
-		// keep the lap beacon at high to make a clean signal
+		// Keep the lap beacon at high to make a clean signal
 		update_and_queue_param_u8(&tcm_lap_timer, 1);
 	}
 	else
 	{
-		// there has not been a new lap within the buffer zone
+		// There has not been a new lap within the buffer zone
 		if (!tcm_lap_timer.data)
 		{
-			// a new lap has been detected
+			// A new lap has been detected
 			update_and_queue_param_u8(&tcm_lap_timer, 1);
 			last_lap_time = HAL_GetTick() - last_lap_beacon;
 			last_fastest_delta_time = last_lap_time - fastest_lap_time;
@@ -100,7 +100,7 @@ int main_task(void)
 		}
 		else
 		{
-			// no new lap, keep sending low
+			// No new lap, keep sending low
 			update_and_queue_param_u8(&tcm_lap_timer, 0);
 		}
 	}
@@ -110,11 +110,11 @@ int main_task(void)
 	// Update shift struct with relevant data
 	update_car_shift_struct();
 
-	// gear calculation handling
+	// Gear calculation handling
 	update_wheel_arr();
 	update_rpm_arr();
 
-	// only check the gear every 25ms
+	// Only check the gear GEAR_UPDATE_TIME_ms
 	static uint32_t last_gear_update = 0;
 	if (HAL_GetTick() - last_gear_update >= GEAR_UPDATE_TIME_ms)
 	{
@@ -136,7 +136,7 @@ int main_task(void)
 
 	// handle the clutch based on the state of the car and the buttons
 	//TODO: rewrite for new CAN buttons
-	clutch_task(sw_clutch_fast, sw_clutch_slow, car_Main_State, car_shift_data.anti_stall);
+	clutch_task(fast_clutch, slow_clutch, car_Main_State, car_shift_data.anti_stall);
 
 	switch (car_Main_State)
 	{
@@ -175,10 +175,10 @@ int main_task(void)
 
 		// start a downshift if there is one pending. This means that a new
 		// shift can be queued during the last shift
-		if (sw_downshift.data)
+		if (downshift.data)
 		{
-			sw_downshift.data = 0;
-			if (calc_validate_downshift(car_shift_data.current_gear, sw_clutch_fast, sw_clutch_slow))
+			downshift.data = 0;
+			if (calc_validate_downshift(car_shift_data.current_gear, fast_clutch, slow_clutch))
 			{
 				car_Main_State = ST_HDL_DOWNSHIFT;
 				car_Downshift_State = ST_D_BEGIN_SHIFT;
@@ -186,10 +186,10 @@ int main_task(void)
 		}
 
 		// same for upshift. Another shift can be queued
-		if (sw_upshift.data)
+		if (upshift.data)
 		{
-			sw_upshift.data = 0;
-			if (calc_validate_upshift(car_shift_data.current_gear, sw_clutch_fast, sw_clutch_slow))
+			upshift.data = 0;
+			if (calc_validate_upshift(car_shift_data.current_gear, fast_clutch, slow_clutch))
 			{
 				car_Main_State = ST_HDL_UPSHIFT;
 				car_Upshift_State = ST_U_BEGIN_SHIFT;
@@ -420,11 +420,12 @@ static void run_downshift_sm(void)
 		// lever does not seem to be as important for downshifts, but still
 		// give some time for it
 		begin_shift_tick = HAL_GetTick();
+
 		set_downshift_solenoid(SOLENOID_ON);
 
-		// we will always be using the clutch for downshifting
-		car_shift_data.using_clutch = true; // EXPIREMENTAL: Uncomment the next line to only clutch during a downshift if the clutch is held during the start of the shift
+		car_shift_data.using_clutch = shift_mode.data != CLUTCHLESS_DOWNSHIFT; // EXPIREMENTAL: Uncomment the next line to only clutch during a downshift if the clutch is held during the start of the shift
 		//car_shift_data.using_clutch = (car_buttons.clutch_fast_button || car_buttons.clutch_slow_button);
+
 		set_clutch_solenoid(car_shift_data.using_clutch ? SOLENOID_ON : SOLENOID_OFF);
 
 		// reset the shift parameters
@@ -482,7 +483,8 @@ static void run_downshift_sm(void)
 			car_Downshift_State = ST_D_ENTER_GEAR;
 			begin_enter_gear_tick = HAL_GetTick();
 
-			// if we were not using the clutch before, start using it now
+			// if we were not using the clutch before, start using it now because
+			// otherwise we're probably going to fail the shift
 			car_shift_data.using_clutch = true;
 		}
 		break;
