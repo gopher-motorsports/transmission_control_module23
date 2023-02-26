@@ -80,16 +80,17 @@ void main_loop()
 		HAL_GPIO_TogglePin(HBEAT_GPIO_Port, HBEAT_Pin);
 	}
 
-	if (HAL_GetTick() - last_test_tick > 1000)
-	{
-		last_test_tick = HAL_GetTick();
-		HAL_GPIO_TogglePin(UPSHIFT_SOL_GPIO_Port, UPSHIFT_SOL_Pin);
-		HAL_GPIO_TogglePin(SPK_CUT_GPIO_Port, SPK_CUT_Pin);
-		HAL_GPIO_TogglePin(AUX1_C_GPIO_Port, AUX1_C_Pin);
-		HAL_GPIO_TogglePin(AUX2_C_GPIO_Port, AUX2_C_Pin);
-		HAL_GPIO_TogglePin(AUX1_T_GPIO_Port, AUX1_T_Pin);
-
-	}
+	// Periodic pin output testing code
+//	if (HAL_GetTick() - last_test_tick > 1000)
+//	{
+//		last_test_tick = HAL_GetTick();
+//		HAL_GPIO_TogglePin(UPSHIFT_SOL_GPIO_Port, UPSHIFT_SOL_Pin);
+//		HAL_GPIO_TogglePin(SPK_CUT_GPIO_Port, SPK_CUT_Pin);
+//		HAL_GPIO_TogglePin(AUX1_C_GPIO_Port, AUX1_C_Pin);
+//		HAL_GPIO_TogglePin(AUX2_C_GPIO_Port, AUX2_C_Pin);
+//		HAL_GPIO_TogglePin(AUX1_T_GPIO_Port, AUX1_T_Pin);
+//
+//	}
 
 	if (HAL_GetTick() - last_test_tick2 > 10)
 	{
