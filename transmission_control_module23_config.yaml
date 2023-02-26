@@ -4,50 +4,50 @@ buckets:
     low_frequency_tcm:
         frequency_hz: 100
         parameters:
-            tcm_gear_position:
+            dam_chan_1:
                 ADC: ADC1_IN15
                 sensor: linear_pos_sensor_5
                 samples_buffered: 1
-            tcm_shifter_position:
+            dam_chan_2:
                 ADC: ADC1_IN8
                 sensor: linear_pos_sensor_50
                 samples_buffered: 1
-            tcm_clutch_position:
-                ADC: ADC2_IN9
+            dam_chan_3:
+                ADC: ADC1_IN9
                 sensor: linear_pos_sensor_50
                 samples_buffered: 1
-            tcm_target_rpm:
-                ADC: NON_ADC
-                sensor: NON_ADC
-                samples_buffered: 1
-                # ADC: NON_ADC
-                # sensor: NON_ADC
-                # samples_buffered: 1
-            tcm_trans_rpm:
-                ADC: NON_ADC
-                sensor: NON_ADC
-                samples_buffered: 1
-            tcm_current_gear:
-                ADC: NON_ADC
-                sensor: NON_ADC
-                samples_buffered: 1
-            tcm_currently_moving:
-                ADC: NON_ADC
-                sensor: NON_ADC
-                samples_buffered: 1
-            tcm_shift_state:
-                ADC: NON_ADC
-                sensor: NON_ADC
-                samples_buffered: 1
-            tcm_using_clutch:
-                ADC: NON_ADC
-                sensor: NON_ADC
-                samples_buffered: 1
-            tcm_successful_shift:
-                ADC: NON_ADC
-                sensor: NON_ADC
-                samples_buffered: 1
-            tcm_anti_stall:
-                ADC: NON_ADC
-                sensor: NON_ADC
-                samples_buffered: 1
+            # tcm_target_rpm:
+            #     ADC: NON_ADC
+            #     sensor: NON_ADC
+            #     samples_buffered: 1
+            #     # ADC: NON_ADC
+            #     # sensor: NON_ADC
+            #     # samples_buffered: 1
+            # tcm_trans_rpm:
+            #     ADC: NON_ADC
+            #     sensor: NON_ADC
+            #     samples_buffered: 1
+            # tcm_current_gear:
+            #     ADC: NON_ADC
+            #     sensor: NON_ADC
+            #     samples_buffered: 1
+            # tcm_currently_moving:
+            #     ADC: NON_ADC
+            #     sensor: NON_ADC
+            #     samples_buffered: 1
+            # tcm_shift_state:
+            #     ADC: NON_ADC
+            #     sensor: NON_ADC
+            #     samples_buffered: 1
+            # tcm_using_clutch:
+            #     ADC: NON_ADC
+            #     sensor: NON_ADC
+            #     samples_buffered: 1
+            # tcm_successful_shift:
+            #     ADC: NON_ADC
+            #     sensor: NON_ADC
+            #     samples_buffered: 1
+            # tcm_anti_stall:
+            #     ADC: NON_ADC
+            #     sensor: NON_ADC
+            #     samples_buffered: 1
