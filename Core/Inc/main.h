@@ -57,18 +57,16 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define BUTTON_Pin GPIO_PIN_13
-#define BUTTON_GPIO_Port GPIOC
 #define GSENSE_LED_Pin GPIO_PIN_4
 #define GSENSE_LED_GPIO_Port GPIOA
 #define HBEAT_Pin GPIO_PIN_5
 #define HBEAT_GPIO_Port GPIOA
-#define AUX_2C_Pin GPIO_PIN_6
-#define AUX_2C_GPIO_Port GPIOA
-#define AUX_1T_Pin GPIO_PIN_4
-#define AUX_1T_GPIO_Port GPIOC
-#define GEAR_POS_Pin GPIO_PIN_5
-#define GEAR_POS_GPIO_Port GPIOC
+#define AUX2_C_Pin GPIO_PIN_6
+#define AUX2_C_GPIO_Port GPIOA
+#define AUX1_T_Pin GPIO_PIN_4
+#define AUX1_T_GPIO_Port GPIOC
+#define GEAR_POS_POT_Pin GPIO_PIN_5
+#define GEAR_POS_POT_GPIO_Port GPIOC
 #define SHIFT_POT_Pin GPIO_PIN_0
 #define SHIFT_POT_GPIO_Port GPIOB
 #define CLUTCH_POT_Pin GPIO_PIN_1
@@ -79,12 +77,12 @@ void Error_Handler(void);
 #define DOWNSHIFT_SOL_GPIO_Port GPIOC
 #define CLUTCH_SOL_Pin GPIO_PIN_8
 #define CLUTCH_SOL_GPIO_Port GPIOC
-#define CLUTCH_SLOW_DROP_Pin GPIO_PIN_9
-#define CLUTCH_SLOW_DROP_GPIO_Port GPIOC
-#define AUX_1C_Pin GPIO_PIN_5
-#define AUX_1C_GPIO_Port GPIOB
-#define ECU_SPK_CUT_Pin GPIO_PIN_6
-#define ECU_SPK_CUT_GPIO_Port GPIOB
+#define SLOW_CLUTCH_SOL_Pin GPIO_PIN_9
+#define SLOW_CLUTCH_SOL_GPIO_Port GPIOC
+#define AUX1_C_Pin GPIO_PIN_5
+#define AUX1_C_GPIO_Port GPIOB
+#define SPK_CUT_Pin GPIO_PIN_6
+#define SPK_CUT_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */

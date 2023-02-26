@@ -73,7 +73,6 @@ void main_loop()
 	static uint32_t last_test_tick = 0;
 	static uint32_t last_test_tick2 = 0;
 	static U32 last_print_hb = 0;
-	U8 button_state;
 
 	if (HAL_GetTick() - last_heartbeat > HEARTBEAT_MS_BETWEEN)
 	{
@@ -85,10 +84,10 @@ void main_loop()
 	{
 		last_test_tick = HAL_GetTick();
 		HAL_GPIO_TogglePin(UPSHIFT_SOL_GPIO_Port, UPSHIFT_SOL_Pin);
-		HAL_GPIO_TogglePin(ECU_SPK_CUT_GPIO_Port, ECU_SPK_CUT_Pin);
-		HAL_GPIO_TogglePin(AUX_1C_GPIO_Port, AUX_1C_Pin);
-		HAL_GPIO_TogglePin(AUX_2C_GPIO_Port, AUX_2C_Pin);
-		HAL_GPIO_TogglePin(AUX_1T_GPIO_Port, AUX_1T_Pin);
+		HAL_GPIO_TogglePin(SPK_CUT_GPIO_Port, SPK_CUT_Pin);
+		HAL_GPIO_TogglePin(AUX1_C_GPIO_Port, AUX1_C_Pin);
+		HAL_GPIO_TogglePin(AUX2_C_GPIO_Port, AUX2_C_Pin);
+		HAL_GPIO_TogglePin(AUX1_T_GPIO_Port, AUX1_T_Pin);
 
 	}
 
@@ -104,22 +103,6 @@ void main_loop()
 	{
 		printf("Current tick: %lu\n", HAL_GetTick());
 		last_print_hb = HAL_GetTick();
-	}
-
-	// If the button is pressed send a can command to another to change the LED state
-	// To on or off depending on the button
-	button_state = HAL_GPIO_ReadPin(BUTTON_GPIO_Port, BUTTON_Pin);
-
-	// Logic to only send one message per change in button state
-	if (button_state != last_button_state)
-	{
-		last_button_state = button_state;
-
-		if (send_can_command(PRIO_HIGH, ALL_MODULES_ID, SET_LED_STATE,
-				!button_state, !button_state, !button_state, !button_state))
-		{
-			// error sending command
-		}
 	}
 }
 
