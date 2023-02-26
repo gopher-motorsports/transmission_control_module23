@@ -49,7 +49,7 @@ CAN_HandleTypeDef hcan1;
 
 TIM_HandleTypeDef htim10;
 
-UART_HandleTypeDef huart2;
+UART_HandleTypeDef huart1;
 
 /* Definitions for main_task */
 osThreadId_t main_taskHandle;
@@ -74,9 +74,9 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_CAN1_Init(void);
-static void MX_USART2_UART_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM10_Init(void);
+static void MX_USART1_UART_Init(void);
 void task_MainTask(void *argument);
 void task_BufferHandling(void *argument);
 
@@ -94,7 +94,7 @@ void task_BufferHandling(void *argument);
 
 PUTCHAR_PROTOTYPE
 {
-  HAL_UART_Transmit(&huart2, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
+  HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
   return ch;
 }
 /* USER CODE END 0 */
@@ -129,22 +129,22 @@ int main(void)
   MX_GPIO_Init();
   MX_DMA_Init();
   MX_CAN1_Init();
-  MX_USART2_UART_Init();
   MX_ADC1_Init();
   MX_TIM10_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 
   init(&hcan1);
   gsense_init(&hcan1, &hadc1, NULL/*&hadc2*/, NULL, &htim10, GSENSE_LED_GPIO_Port, GSENSE_LED_Pin);
 
-  HAL_GPIO_WritePin(ECU_SPK_CUT_GPIO_Port, ECU_SPK_CUT_Pin, 1);
-  HAL_GPIO_WritePin(CLUTCH_SLOW_DROP_GPIO_Port, CLUTCH_SLOW_DROP_Pin, 0);
+  HAL_GPIO_WritePin(SPK_CUT_GPIO_Port, SPK_CUT_Pin, 1);
   HAL_GPIO_WritePin(CLUTCH_SOL_GPIO_Port, CLUTCH_SOL_Pin, 0);
+  HAL_GPIO_WritePin(SLOW_CLUTCH_SOL_GPIO_Port, SLOW_CLUTCH_SOL_Pin, 0);
   HAL_GPIO_WritePin(DOWNSHIFT_SOL_GPIO_Port, DOWNSHIFT_SOL_Pin, 0);
   HAL_GPIO_WritePin(UPSHIFT_SOL_GPIO_Port, UPSHIFT_SOL_Pin, 0);
-  HAL_GPIO_WritePin(AUX_1C_GPIO_Port, AUX_1C_Pin, 0);
-  HAL_GPIO_WritePin(AUX_2C_GPIO_Port, AUX_2C_Pin, 0);
-  HAL_GPIO_WritePin(AUX_1T_GPIO_Port, AUX_1T_Pin, 0);
+  HAL_GPIO_WritePin(AUX1_C_GPIO_Port, AUX1_C_Pin, 0);
+  HAL_GPIO_WritePin(AUX2_C_GPIO_Port, AUX2_C_Pin, 0);
+  HAL_GPIO_WritePin(AUX1_T_GPIO_Port, AUX1_T_Pin, 0);
 
   /* USER CODE END 2 */
 
@@ -268,13 +268,13 @@ static void MX_ADC1_Init(void)
   hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
   hadc1.Init.Resolution = ADC_RESOLUTION_12B;
   hadc1.Init.ScanConvMode = ENABLE;
-  hadc1.Init.ContinuousConvMode = ENABLE;
+  hadc1.Init.ContinuousConvMode = DISABLE;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
   hadc1.Init.NbrOfConversion = 3;
-  hadc1.Init.DMAContinuousRequests = ENABLE;
+  hadc1.Init.DMAContinuousRequests = DISABLE;
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
   {
@@ -283,9 +283,9 @@ static void MX_ADC1_Init(void)
 
   /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
   */
-  sConfig.Channel = ADC_CHANNEL_8;
+  sConfig.Channel = ADC_CHANNEL_10;
   sConfig.Rank = 1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  sConfig.SamplingTime = ADC_SAMPLETIME_15CYCLES;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -293,7 +293,7 @@ static void MX_ADC1_Init(void)
 
   /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
   */
-  sConfig.Channel = ADC_CHANNEL_9;
+  sConfig.Channel = ADC_CHANNEL_11;
   sConfig.Rank = 2;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
@@ -302,7 +302,7 @@ static void MX_ADC1_Init(void)
 
   /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
   */
-  sConfig.Channel = ADC_CHANNEL_15;
+  sConfig.Channel = ADC_CHANNEL_12;
   sConfig.Rank = 3;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
@@ -383,35 +383,35 @@ static void MX_TIM10_Init(void)
 }
 
 /**
-  * @brief USART2 Initialization Function
+  * @brief USART1 Initialization Function
   * @param None
   * @retval None
   */
-static void MX_USART2_UART_Init(void)
+static void MX_USART1_UART_Init(void)
 {
 
-  /* USER CODE BEGIN USART2_Init 0 */
+  /* USER CODE BEGIN USART1_Init 0 */
 
-  /* USER CODE END USART2_Init 0 */
+  /* USER CODE END USART1_Init 0 */
 
-  /* USER CODE BEGIN USART2_Init 1 */
+  /* USER CODE BEGIN USART1_Init 1 */
 
-  /* USER CODE END USART2_Init 1 */
-  huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
-  huart2.Init.WordLength = UART_WORDLENGTH_8B;
-  huart2.Init.StopBits = UART_STOPBITS_1;
-  huart2.Init.Parity = UART_PARITY_NONE;
-  huart2.Init.Mode = UART_MODE_TX_RX;
-  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart2) != HAL_OK)
+  /* USER CODE END USART1_Init 1 */
+  huart1.Instance = USART1;
+  huart1.Init.BaudRate = 115200;
+  huart1.Init.WordLength = UART_WORDLENGTH_8B;
+  huart1.Init.StopBits = UART_STOPBITS_1;
+  huart1.Init.Parity = UART_PARITY_NONE;
+  huart1.Init.Mode = UART_MODE_TX_RX;
+  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart1) != HAL_OK)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN USART2_Init 2 */
+  /* USER CODE BEGIN USART1_Init 2 */
 
-  /* USER CODE END USART2_Init 2 */
+  /* USER CODE END USART1_Init 2 */
 
 }
 
@@ -446,47 +446,47 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GSENSE_LED_Pin|HBEAT_Pin|AUX_2C_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, AUX1_T_Pin|GSENSE_LED_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, AUX_1T_Pin|UPSHIFT_SOL_Pin|DOWNSHIFT_SOL_Pin|CLUTCH_SOL_Pin
-                          |CLUTCH_SLOW_DROP_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, DOWNSHIFT_SOL_Pin|CLUTCH_SOL_Pin|SLOW_CLUTCH_SOL_Pin|UPSHIFT_SOL_Pin
+                          |SPK_CUT_Pin|AUX1_C_Pin|HBEAT_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, AUX_1C_Pin|ECU_SPK_CUT_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, AUX2_C_Pin|FAULT_LED_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin : BUTTON_Pin */
-  GPIO_InitStruct.Pin = BUTTON_Pin;
+  /*Configure GPIO pins : SWITCH_FAULT_3V3_Pin SWITCH_FAULT_5V_Pin */
+  GPIO_InitStruct.Pin = SWITCH_FAULT_3V3_Pin|SWITCH_FAULT_5V_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(BUTTON_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : GSENSE_LED_Pin HBEAT_Pin AUX_2C_Pin */
-  GPIO_InitStruct.Pin = GSENSE_LED_Pin|HBEAT_Pin|AUX_2C_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : AUX_1T_Pin UPSHIFT_SOL_Pin DOWNSHIFT_SOL_Pin CLUTCH_SOL_Pin
-                           CLUTCH_SLOW_DROP_Pin */
-  GPIO_InitStruct.Pin = AUX_1T_Pin|UPSHIFT_SOL_Pin|DOWNSHIFT_SOL_Pin|CLUTCH_SOL_Pin
-                          |CLUTCH_SLOW_DROP_Pin;
+  /*Configure GPIO pins : AUX1_T_Pin GSENSE_LED_Pin */
+  GPIO_InitStruct.Pin = AUX1_T_Pin|GSENSE_LED_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PB4 */
-  GPIO_InitStruct.Pin = GPIO_PIN_4;
+  /*Configure GPIO pins : DOWNSHIFT_SOL_Pin CLUTCH_SOL_Pin SLOW_CLUTCH_SOL_Pin UPSHIFT_SOL_Pin
+                           SPK_CUT_Pin AUX1_C_Pin HBEAT_Pin */
+  GPIO_InitStruct.Pin = DOWNSHIFT_SOL_Pin|CLUTCH_SOL_Pin|SLOW_CLUTCH_SOL_Pin|UPSHIFT_SOL_Pin
+                          |SPK_CUT_Pin|AUX1_C_Pin|HBEAT_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : TRANS_SPEED_Pin */
+  GPIO_InitStruct.Pin = TRANS_SPEED_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.Alternate = GPIO_AF2_TIM3;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  GPIO_InitStruct.Alternate = GPIO_AF1_TIM2;
+  HAL_GPIO_Init(TRANS_SPEED_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : AUX_1C_Pin ECU_SPK_CUT_Pin */
-  GPIO_InitStruct.Pin = AUX_1C_Pin|ECU_SPK_CUT_Pin;
+  /*Configure GPIO pins : AUX2_C_Pin FAULT_LED_Pin */
+  GPIO_InitStruct.Pin = AUX2_C_Pin|FAULT_LED_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;

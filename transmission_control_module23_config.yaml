@@ -5,15 +5,15 @@ buckets:
         frequency_hz: 100
         parameters:
             dam_chan_1:
-                ADC: ADC1_IN15
+                ADC: ADC1_IN10
                 sensor: linear_pos_sensor_5
                 samples_buffered: 1
             dam_chan_2:
-                ADC: ADC1_IN8
+                ADC: ADC1_IN11
                 sensor: linear_pos_sensor_50
                 samples_buffered: 1
             dam_chan_3:
-                ADC: ADC1_IN9
+                ADC: ADC1_IN12
                 sensor: linear_pos_sensor_50
                 samples_buffered: 1
             # tcm_target_rpm:
