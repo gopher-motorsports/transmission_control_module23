@@ -1,7 +1,7 @@
 // GopherCAN_devboard_example.c
 //  This is a bare-bones module file that can be used in order to make a module main file
 
-#include "GopherCAN_devboard_example.h"
+#include <main_task.h>
 #include "main.h"
 #include <stdio.h>
 
