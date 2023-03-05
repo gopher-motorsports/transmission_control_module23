@@ -4,15 +4,15 @@ buckets:
     low_frequency_tcm:
         frequency_hz: 100
         parameters:
-            dam_chan_1:
+            gearPosition_mm:
                 ADC: ADC1_IN15
                 sensor: linear_pos_sensor_5
                 samples_buffered: 1
-            dam_chan_2:
+            clutchPosition_mm:
                 ADC: ADC1_IN8
                 sensor: linear_pos_sensor_50
                 samples_buffered: 1
-            dam_chan_3:
+            shifterPosition_mm:
                 ADC: ADC1_IN9
                 sensor: linear_pos_sensor_50
                 samples_buffered: 1
