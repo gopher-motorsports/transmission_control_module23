@@ -25,6 +25,7 @@ static float ADCReadValue3 = 0;
 // the CAN callback function used in this example
 static void change_led_state(U8 sender, void* UNUSED_LOCAL_PARAM, U8 remote_param, U8 UNUSED1, U8 UNUSED2, U8 UNUSED3);
 static void init_error(void);
+static void updateAndQueueParams(void);
 
 // init
 //  What needs to happen on startup in order to run GopherCAN
@@ -71,8 +72,6 @@ void can_buffer_handling_loop()
 void main_loop()
 {
 	static uint32_t last_heartbeat = 0;
-	static uint32_t last_test_tick = 0;
-	static uint32_t last_test_tick2 = 0;
 	static U32 last_print_hb = 0;
 
 	if (HAL_GetTick() - last_heartbeat > HEARTBEAT_MS_BETWEEN)
@@ -81,24 +80,7 @@ void main_loop()
 		HAL_GPIO_TogglePin(HBEAT_GPIO_Port, HBEAT_Pin);
 	}
 
-	// Periodic pin output testing code
-//	if (HAL_GetTick() - last_test_tick > 1000)
-//	{
-//		last_test_tick = HAL_GetTick();
-//		HAL_GPIO_TogglePin(UPSHIFT_SOL_GPIO_Port, UPSHIFT_SOL_Pin);
-//		HAL_GPIO_TogglePin(SPK_CUT_GPIO_Port, SPK_CUT_Pin);
-//		HAL_GPIO_TogglePin(AUX1_C_GPIO_Port, AUX1_C_Pin);
-//		HAL_GPIO_TogglePin(AUX2_C_GPIO_Port, AUX2_C_Pin);
-//		HAL_GPIO_TogglePin(AUX1_T_GPIO_Port, AUX1_T_Pin);
-//
-//	}
-
-	if (HAL_GetTick() - last_test_tick2 > 10)
-	{
-		ADCReadValue3 = get_gear_pot_pos();
-		ADCReadValue1 = get_shift_pot_pos();
-		ADCReadValue2 = get_clutch_pot_pos();
-	}
+	updateAndQueueParams();
 
 	// send the current tick over UART every second
 	if (HAL_GetTick() - last_print_hb >= PRINTF_HB_MS_BETWEEN)
@@ -106,6 +88,36 @@ void main_loop()
 		printf("Current tick: %lu\n", HAL_GetTick());
 		last_print_hb = HAL_GetTick();
 	}
+}
+
+// Updates gcan variables
+static void updateAndQueueParams(void) {
+	update_and_queue_param_float(&counterShaftSpeed_rpm, tcm_data.trans_speed);
+	update_and_queue_param_u32(&tcmTargetRPM_rpm, tcm_data.target_RPM); // Sends it to be logged
+	update_and_queue_param_u8(&tcmCurrentGear_state, tcm_data.current_gear);
+	update_and_queue_param_u8(&tcmCurrentlyMoving_state, tcm_data.currently_moving);
+	update_and_queue_param_u8(&tcmAntiStallActive_state, tcm_data.anti_stall);
+	update_and_queue_param_u8(&tcmUsingClutch_state, tcm_data.using_clutch);
+
+	// TODO logic for sending the current state of the shifts
+//	switch (car_Main_State)
+//	{
+//	default:
+//	case ST_IDLE:
+//		// not shifting, send 0
+//		update_and_queue_param_u8(&tcmShiftState_state, 0);
+//		break;
+//
+//	case ST_HDL_UPSHIFT:
+//		// send the upshift state
+//		update_and_queue_param_u8(&tcmShiftState_state, car_Upshift_State);
+//		break;
+//
+//	case ST_HDL_DOWNSHIFT:
+//		// send the downshift state
+//		update_and_queue_param_u8(&tcmShiftState_state, car_Downshift_State);
+//		break;
+//	}
 }
 
 float get_gear_pot_pos(void)
