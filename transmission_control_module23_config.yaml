@@ -16,6 +16,10 @@ buckets:
                 ADC: ADC1_IN9
                 sensor: linear_pos_sensor_50
                 samples_buffered: 1
+            counterShaftSpeed_rpm:
+                ADC: NON_ADC
+                sensor: NON_ADC
+                samples_buffered: 1                
             tcmTargetRPM_rpm:
                 ADC: NON_ADC
                 sensor: NON_ADC
