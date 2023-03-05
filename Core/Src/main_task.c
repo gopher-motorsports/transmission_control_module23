@@ -1,8 +1,9 @@
 // GopherCAN_devboard_example.c
 //  This is a bare-bones module file that can be used in order to make a module main file
 
-#include <main_task.h>
+#include "main_task.h"
 #include "main.h"
+#include "utils.h"
 #include <stdio.h>
 
 // the HAL_CAN struct. This example only works for a single CAN bus
