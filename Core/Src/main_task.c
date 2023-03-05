@@ -10,7 +10,7 @@ CAN_HandleTypeDef* example_hcan;
 
 
 // Use this to define what module this board will be
-#define THIS_MODULE_ID PDM_ID
+#define THIS_MODULE_ID TCM_ID
 #define PRINTF_HB_MS_BETWEEN 1000
 #define HEARTBEAT_MS_BETWEEN 500
 
@@ -109,17 +109,17 @@ void main_loop()
 
 float get_gear_pot_pos(void)
 {
-	return dam_chan_1.data;
+	return gearPosition_mm.data;
 }
 
 float get_clutch_pot_pos(void)
 {
-	return dam_chan_2.data;
+	return clutchPosition_mm.data;
 }
 
 float get_shift_pot_pos(void)
 {
-	return dam_chan_3.data;
+	return shifterPosition_mm.data;
 }
 
 
