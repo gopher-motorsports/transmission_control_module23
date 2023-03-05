@@ -16,38 +16,27 @@ buckets:
                 ADC: ADC1_IN9
                 sensor: linear_pos_sensor_50
                 samples_buffered: 1
-            # tcm_target_rpm:
-            #     ADC: NON_ADC
-            #     sensor: NON_ADC
-            #     samples_buffered: 1
-            #     # ADC: NON_ADC
-            #     # sensor: NON_ADC
-            #     # samples_buffered: 1
-            # tcm_trans_rpm:
-            #     ADC: NON_ADC
-            #     sensor: NON_ADC
-            #     samples_buffered: 1
-            # tcm_current_gear:
-            #     ADC: NON_ADC
-            #     sensor: NON_ADC
-            #     samples_buffered: 1
-            # tcm_currently_moving:
-            #     ADC: NON_ADC
-            #     sensor: NON_ADC
-            #     samples_buffered: 1
-            # tcm_shift_state:
-            #     ADC: NON_ADC
-            #     sensor: NON_ADC
-            #     samples_buffered: 1
-            # tcm_using_clutch:
-            #     ADC: NON_ADC
-            #     sensor: NON_ADC
-            #     samples_buffered: 1
-            # tcm_successful_shift:
-            #     ADC: NON_ADC
-            #     sensor: NON_ADC
-            #     samples_buffered: 1
-            # tcm_anti_stall:
-            #     ADC: NON_ADC
-            #     sensor: NON_ADC
-            #     samples_buffered: 1
+            tcmTargetRPM_rpm:
+                ADC: NON_ADC
+                sensor: NON_ADC
+                samples_buffered: 1
+            tcmCurrentGear_state:
+                ADC: NON_ADC
+                sensor: NON_ADC
+                samples_buffered: 1
+            tcmCurrentlyMoving_state:
+                ADC: NON_ADC
+                sensor: NON_ADC
+                samples_buffered: 1
+            tcmAntiStallActive_state:
+                ADC: NON_ADC
+                sensor: NON_ADC
+                samples_buffered: 1
+            tcmUsingClutch_state:
+                ADC: NON_ADC
+                sensor: NON_ADC
+                samples_buffered: 1
+            tcmShiftState_state:
+                ADC: NON_ADC
+                sensor: NON_ADC
+                samples_buffered: 1
