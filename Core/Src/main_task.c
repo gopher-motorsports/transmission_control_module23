@@ -375,7 +375,7 @@ static void run_downshift_sm(void)
 
 	set_downshift_solenoid(SOLENOID_ON);
 
-	tcm_data.using_clutch = shift_mode.data != CLUTCHLESS_DOWNSHIFT; // EXPIREMENTAL: Uncomment the next line to only clutch during a downshift if the clutch is held during the start of the shift
+	tcm_data.using_clutch = tcm_data.shift_mode != CLUTCHLESS_DOWNSHIFT; // EXPIREMENTAL: Uncomment the next line to only clutch during a downshift if the clutch is held during the start of the shift
 	//tcm_data.using_clutch = (car_buttons.clutch_fast_button || car_buttons.clutch_slow_button);
 
 	set_clutch_solenoid(tcm_data.using_clutch ? SOLENOID_ON : SOLENOID_OFF);
