@@ -3,6 +3,7 @@
 
 #include "GopherCAN_devboard_example.h"
 #include "main.h"
+#include "gopher_sense.h"
 #include <stdio.h>
 
 // the HAL_CAN struct. This example only works for a single CAN bus
@@ -92,13 +93,13 @@ void main_loop()
 //
 //	}
 
-	if (HAL_GetTick() - last_test_tick2 > 10)
+	if (HAL_GetTick() - last_test_tick2 > 1)
 	{
 		//test8888();
-		checkAllDMAs();
-		ADCReadValue3 = get_gear_pot_pos();
-		ADCReadValue1 = get_shift_pot_pos();
-		ADCReadValue2 = get_clutch_pot_pos();
+		check_all_dmas();
+//		ADCReadValue3 = get_gear_pot_pos();
+//		ADCReadValue1 = get_shift_pot_pos();
+//		ADCReadValue2 = get_clutch_pot_pos();
 		last_test_tick2 = HAL_GetTick();
 	}
 

@@ -42,6 +42,7 @@
 #define USE_VAR_SS true
 #define IC_LOW_SAMPLES 2
 #define IC_HIGH_SAMPLES 1500
+#define MIN_SAMPLES 5
 
 /* USER CODE END PD */
 
@@ -152,7 +153,7 @@ int main(void)
   init(&hcan1);
   gsense_init(&hcan1, &hadc1, NULL/*&hadc2*/, NULL, &htim10, GSENSE_LED_GPIO_Port, GSENSE_LED_Pin);
 
-  setupTimerAndStartDMA(
+  setup_timer_and_start_dma_vss(
 		  IC_TIMER,
  		  TIM_CHANNEL_1,
  		  IC_TIMER_PERIOD_NS,
@@ -160,7 +161,8 @@ int main(void)
  		  &resultStoreLocation,
  		  USE_VAR_SS,
  		  IC_LOW_SAMPLES,
- 		  IC_HIGH_SAMPLES
+ 		  IC_HIGH_SAMPLES,
+		  MIN_SAMPLES
    );
 
   // Set initial output states so nothing is floating
