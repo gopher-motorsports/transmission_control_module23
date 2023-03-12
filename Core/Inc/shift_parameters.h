@@ -57,6 +57,14 @@
 #define GEAR_4_WHEEL_RATIO 86.6f
 #define GEAR_5_WHEEL_RATIO 78.7f
 
+#define GEAR_POS_MARGIN_mm 0.1
+#define NEUTRAL_DISTANCE_mm 0
+#define GEAR_1_DISTANCE_mm 1
+#define GEAR_2_DISTANCE_mm 2
+#define GEAR_3_DISTANCE_mm 3
+#define GEAR_4_DISTANCE_mm 4
+#define GEAR_5_DISTANCE_mm 5
+
 // RPM cutoffs
 #define MAX_RPM 14000
 #define MIN_SPARK_CUT_RPM 3000
@@ -66,5 +74,6 @@
 // misc defines
 #define MOVING_WHEEL_SPEED_MIN_CUTOFF 2.0f
 #define BUTTON_DEBOUNCE_MS 20
+#define NUM_WHEELS 4
 
 #endif /* INC_SHIFT_PARAMETERS_H_ */
