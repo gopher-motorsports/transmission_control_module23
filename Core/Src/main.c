@@ -24,6 +24,7 @@
 /* USER CODE BEGIN Includes */
 #include "GopherCAN_devboard_example.h"
 #include "gopher_sense.h"
+#include <stdbool.h>
 
 /* USER CODE END Includes */
 
@@ -34,6 +35,14 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+
+#define IC_TIMER &htim3
+#define IC_TIMER_PERIOD_NS 100
+#define IC_CONVERSION_RATIO 30
+#define USE_VAR_SS true
+#define IC_LOW_SAMPLES 2
+#define IC_HIGH_SAMPLES 1500
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -47,7 +56,9 @@ DMA_HandleTypeDef hdma_adc1;
 
 CAN_HandleTypeDef hcan1;
 
+TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim10;
+DMA_HandleTypeDef hdma_tim3_ch1_trig;
 
 UART_HandleTypeDef huart1;
 
@@ -67,6 +78,8 @@ const osThreadAttr_t buffer_handling_attributes = {
 };
 /* USER CODE BEGIN PV */
 
+float resultStoreLocation = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -77,6 +90,7 @@ static void MX_CAN1_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM10_Init(void);
 static void MX_USART1_UART_Init(void);
+static void MX_TIM3_Init(void);
 void task_MainTask(void *argument);
 void task_BufferHandling(void *argument);
 
@@ -132,10 +146,22 @@ int main(void)
   MX_ADC1_Init();
   MX_TIM10_Init();
   MX_USART1_UART_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
 
   init(&hcan1);
   gsense_init(&hcan1, &hadc1, NULL/*&hadc2*/, NULL, &htim10, GSENSE_LED_GPIO_Port, GSENSE_LED_Pin);
+
+  setupTimerAndStartDMA(
+		  IC_TIMER,
+ 		  TIM_CHANNEL_1,
+ 		  IC_TIMER_PERIOD_NS,
+ 		  IC_CONVERSION_RATIO,
+ 		  &resultStoreLocation,
+ 		  USE_VAR_SS,
+ 		  IC_LOW_SAMPLES,
+ 		  IC_HIGH_SAMPLES
+   );
 
   // Set initial output states so nothing is floating
   HAL_GPIO_WritePin(SPK_CUT_GPIO_Port, SPK_CUT_Pin, 0);
@@ -353,6 +379,64 @@ static void MX_CAN1_Init(void)
 }
 
 /**
+  * @brief TIM3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM3_Init(void)
+{
+
+  /* USER CODE BEGIN TIM3_Init 0 */
+
+  /* USER CODE END TIM3_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_IC_InitTypeDef sConfigIC = {0};
+
+  /* USER CODE BEGIN TIM3_Init 1 */
+
+  /* USER CODE END TIM3_Init 1 */
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 80;
+  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period = 0xffff;
+  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_IC_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
+  sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
+  sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
+  sConfigIC.ICFilter = 0;
+  if (HAL_TIM_IC_ConfigChannel(&htim3, &sConfigIC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM3_Init 2 */
+
+  /* USER CODE END TIM3_Init 2 */
+
+}
+
+/**
   * @brief TIM10 Initialization Function
   * @param None
   * @retval None
@@ -424,8 +508,12 @@ static void MX_DMA_Init(void)
 
   /* DMA controller clock enable */
   __HAL_RCC_DMA2_CLK_ENABLE();
+  __HAL_RCC_DMA1_CLK_ENABLE();
 
   /* DMA interrupt init */
+  /* DMA1_Stream4_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream4_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream4_IRQn);
   /* DMA2_Stream0_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
@@ -471,14 +559,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PB4 */
-  GPIO_InitStruct.Pin = GPIO_PIN_4;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.Alternate = GPIO_AF2_TIM3;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pins : AUX1_C_Pin SPK_CUT_Pin */
   GPIO_InitStruct.Pin = AUX1_C_Pin|SPK_CUT_Pin;
