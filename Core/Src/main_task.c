@@ -9,18 +9,13 @@
 // the HAL_CAN struct. This example only works for a single CAN bus
 CAN_HandleTypeDef* example_hcan;
 
-
 // Use this to define what module this board will be
 #define THIS_MODULE_ID TCM_ID
 #define PRINTF_HB_MS_BETWEEN 1000
 #define HEARTBEAT_MS_BETWEEN 500
 
-
 // some global variables for examples
 U8 last_button_state = 0;
-static float ADCReadValue1 = 0;
-static float ADCReadValue2 = 0;
-static float ADCReadValue3 = 0;
 
 // the CAN callback function used in this example
 static void change_led_state(U8 sender, void* UNUSED_LOCAL_PARAM, U8 remote_param, U8 UNUSED1, U8 UNUSED2, U8 UNUSED3);
@@ -134,9 +129,6 @@ float get_shift_pot_pos(void)
 {
 	return shifterPosition_mm.data;
 }
-
-
-
 
 // can_callback_function example
 
