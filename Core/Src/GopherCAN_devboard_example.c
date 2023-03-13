@@ -8,18 +8,13 @@
 // the HAL_CAN struct. This example only works for a single CAN bus
 CAN_HandleTypeDef* example_hcan;
 
-
 // Use this to define what module this board will be
 #define THIS_MODULE_ID TCM_ID
 #define PRINTF_HB_MS_BETWEEN 1000
 #define HEARTBEAT_MS_BETWEEN 500
 
-
 // some global variables for examples
 U8 last_button_state = 0;
-static float ADCReadValue1 = 0;
-static float ADCReadValue2 = 0;
-static float ADCReadValue3 = 0;
 
 // the CAN callback function used in this example
 static void change_led_state(U8 sender, void* UNUSED_LOCAL_PARAM, U8 remote_param, U8 UNUSED1, U8 UNUSED2, U8 UNUSED3);
@@ -70,33 +65,12 @@ void can_buffer_handling_loop()
 void main_loop()
 {
 	static uint32_t last_heartbeat = 0;
-	static uint32_t last_test_tick = 0;
-	static uint32_t last_test_tick2 = 0;
 	static U32 last_print_hb = 0;
 
 	if (HAL_GetTick() - last_heartbeat > HEARTBEAT_MS_BETWEEN)
 	{
 		last_heartbeat = HAL_GetTick();
 		HAL_GPIO_TogglePin(HBEAT_GPIO_Port, HBEAT_Pin);
-	}
-
-	//Periodic pin output testing code
-	if (HAL_GetTick() - last_test_tick > 1000)
-	{
-		last_test_tick = HAL_GetTick();
-		HAL_GPIO_TogglePin(UPSHIFT_SOL_GPIO_Port, UPSHIFT_SOL_Pin);
-		HAL_GPIO_TogglePin(SPK_CUT_GPIO_Port, SPK_CUT_Pin);
-		HAL_GPIO_TogglePin(AUX1_C_GPIO_Port, AUX1_C_Pin);
-		HAL_GPIO_TogglePin(AUX2_C_GPIO_Port, AUX2_C_Pin);
-		HAL_GPIO_TogglePin(AUX1_T_GPIO_Port, AUX1_T_Pin);
-
-	}
-
-	if (HAL_GetTick() - last_test_tick2 > 10)
-	{
-		ADCReadValue3 = get_gear_pot_pos();
-		ADCReadValue1 = get_shift_pot_pos();
-		ADCReadValue2 = get_clutch_pot_pos();
 	}
 
 	// send the current tick over UART every second
@@ -121,9 +95,6 @@ float get_shift_pot_pos(void)
 {
 	return shifterPosition_mm.data;
 }
-
-
-
 
 // can_callback_function example
 
