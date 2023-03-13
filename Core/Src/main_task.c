@@ -4,6 +4,7 @@
 #include "main_task.h"
 #include "main.h"
 #include "utils.h"
+#include "gopher_sense.h"
 #include <stdio.h>
 
 // the HAL_CAN struct. This example only works for a single CAN bus
@@ -88,7 +89,7 @@ void main_loop()
 // Updates gcan variables
 static void updateAndQueueParams(void) {
 	update_and_queue_param_float(&counterShaftSpeed_rpm, tcm_data.trans_speed);
-	update_and_queue_param_u32(&tcmTargetRPM_rpm, tcm_data.target_RPM); // Sends it to be logged
+	update_and_queue_param_u16(&tcmTargetRPM_rpm, tcm_data.target_RPM); // Sends it to be logged
 	update_and_queue_param_u8(&tcmCurrentGear_state, tcm_data.current_gear);
 	update_and_queue_param_u8(&tcmCurrentlyMoving_state, tcm_data.currently_moving);
 	update_and_queue_param_u8(&tcmAntiStallActive_state, tcm_data.anti_stall);
