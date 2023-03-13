@@ -60,7 +60,6 @@ void update_tcm_data(void);
 float get_trans_speed();
 float get_ave_wheel_speed();
 U32 get_RPM();
-void clutch_task(Main_States_t car_state);
 void check_buttons_and_set_clutch_sol(solenoid_position_t position);
 void safe_spark_cut(bool state);
 float get_ave_rpm();

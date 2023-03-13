@@ -48,55 +48,6 @@ U32 get_RPM() {
 	return engineRPM_rpm.data;
 }
 
-// clutch_task
-//  for use in the main task. Sets the slow and fast drop accordingly and handles
-//  clutch position if in ST_IDLE
-void clutch_task(Main_States_t car_state) {
-	static bool using_slow_drop = false;
-	// normal clutch button must not be pressed when using slow drop. Fast drop is
-	// given priority
-	if (swFastClutch_state.data) using_slow_drop = false;
-
-	// if the slow drop button is pressed latch the slow drop
-	else if (swSlowClutch_state.data) using_slow_drop = true;
-
-	// If either clutch button pressed then enable solenoid. Always turn it on regardless of
-	// if we are shifting or not
-	if (swFastClutch_state.data || swSlowClutch_state.data)
-	{
-		set_clutch_solenoid(SOLENOID_ON);
-		return;
-	}
-
-	// If neither clutch button pressed and we are in IDLE and not in anti stall
-	// close clutch solenoid. This will cause clutch presses to latch to the end
-	// of a shift
-	if (!(swFastClutch_state.data || swSlowClutch_state.data)
-			&& car_state == ST_IDLE && tcm_data.anti_stall)
-	{
-		set_clutch_solenoid(SOLENOID_OFF);
-
-		// if we are using slow drop enable or disable the slow release valve depending
-		// on if we are near the bite point
-		if (using_slow_drop)
-		{
-			// when slow dropping, we want to start by fast dropping until the bite point
-			if (get_clutch_pot_pos() < CLUTCH_OPEN_POS_MM - CLUTCH_SLOW_DROP_FAST_TO_SLOW_EXTRA_MM)
-			{
-				set_slow_drop(false);
-			}
-			else
-			{
-				set_slow_drop(true);
-			}
-		}
-		else
-		{
-			// not using slow drop
-			set_slow_drop(false);
-		}
-	}
-}
 
 // check_buttons_and_set_clutch_sol
 //  for use of clutch during shifting. This will make sure the driver is not pressing
