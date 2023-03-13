@@ -4,12 +4,12 @@
 #include "main_task.h"
 #include "main.h"
 #include "utils.h"
+#include "gopher_sense.h"
 #include <stdio.h>
 #include "shift_parameters.h"
 
 // the HAL_CAN struct. This example only works for a single CAN bus
 CAN_HandleTypeDef* example_hcan;
-
 
 // Use this to define what module this board will be
 #define THIS_MODULE_ID TCM_ID
@@ -17,15 +17,11 @@ CAN_HandleTypeDef* example_hcan;
 #define HEARTBEAT_MS_BETWEEN 500
 #define TCM_DATA_UPDATE_MS_BETWEEN 10
 
-
 // some global variables for examples
 static Main_States_t car_Main_State = ST_IDLE;
 static Upshift_States_t car_Upshift_State;
 static Downshift_States_t car_Downshift_State;
 U8 last_button_state = 0;
-static float ADCReadValue1 = 0;
-static float ADCReadValue2 = 0;
-static float ADCReadValue3 = 0;
 
 // the CAN callback function used in this example
 static void change_led_state(U8 sender, void* UNUSED_LOCAL_PARAM, U8 remote_param, U8 UNUSED1, U8 UNUSED2, U8 UNUSED3);
@@ -107,7 +103,7 @@ void main_loop()
 // Updates gcan variables
 static void updateAndQueueParams(void) {
 	update_and_queue_param_float(&counterShaftSpeed_rpm, tcm_data.trans_speed);
-	update_and_queue_param_u32(&tcmTargetRPM_rpm, tcm_data.target_RPM); // Sends it to be logged
+	update_and_queue_param_u16(&tcmTargetRPM_rpm, tcm_data.target_RPM); // Sends it to be logged
 	update_and_queue_param_u8(&tcmCurrentGear_state, tcm_data.current_gear);
 	update_and_queue_param_u8(&tcmCurrentlyMoving_state, tcm_data.currently_moving);
 	update_and_queue_param_u8(&tcmAntiStallActive_state, tcm_data.anti_stall);
