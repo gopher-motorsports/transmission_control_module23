@@ -86,6 +86,7 @@ void main_loop()
 	}
 
 	updateAndQueueParams();
+	clutch_task();
 
 	// send the current tick over UART every second
 	if (HAL_GetTick() - lastPrintHB >= PRINTF_HB_MS_BETWEEN)
