@@ -131,7 +131,7 @@ gear_t get_current_gear(Main_States_t current_state)
 // calc_target_RPM
 //  Using target gear and wheel speed return the RPM we need to hit to enter that
 //  gear
-U32 calc_target_RPM() {
+U32 calc_target_RPM(gear_t target_gear) {
 	return 0; // TODO
 }
 

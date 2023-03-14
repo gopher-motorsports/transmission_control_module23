@@ -22,6 +22,10 @@
 #define UPSHIFT_EXTRA_PUSH_TIME 50
 #define UPSHIFT_EXIT_POS_MM 42.8f
 #define UPSHIFT_ENTER_POS_MM 47.3f
+#define UPSHIFT_EXIT_GEAR_TIME_MS 50 // TODO: CHANGEME
+#define UPSHIFT_ENTER_GEAR_TIME_MS 50 // TODO: CHANGEME
+#define DOWNSHIFT_EXIT_GEAR_TIME_MS 50 // TODO: CHANGEME
+#define DOWNSHIFT_ENTER_GEAR_TIME_MS 50 // TODO: CHANGEME
 
 // downshift defines
 #define DOWNSHIFT_MIN_SHIFT_TIME 60 // some extra time is given in addition to this because the clutch takes some time to return to the bite point, even with fast clutch

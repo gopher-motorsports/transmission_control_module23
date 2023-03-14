@@ -21,13 +21,6 @@ typedef enum
 	NUM_GEARS
 } gear_t;
 
-typedef enum
-{
-	DEFAULT,
-	CLUTCHLESS_DOWNSHIFT,
-	TIME_BASED_SHIFT
-} shift_mode_t;
-
 typedef struct tcm_data_struct
 {
 	uint32_t current_RPM;
@@ -38,13 +31,14 @@ typedef struct tcm_data_struct
 
 	gear_t current_gear;
 	gear_t target_gear;
-	shift_mode_t shift_mode;
 
 	bool currently_moving;	// Is the car moving?
 	bool gear_established;	// Gear established - Used for determining gear upon startup
 	bool using_clutch;		// Are we using the clutch for this shift?
 	bool successful_shift;	// Has the shift been successful
 	bool anti_stall;		// Anti Stall
+	bool clutchless_downshift;
+	bool time_shift_only;
 } tcm_data_struct_t;
 
 typedef enum
@@ -66,12 +60,12 @@ float get_ave_rpm();
 float current_trans_wheel_ratio(void);
 float current_RPM_trans_ratio();
 gear_t get_current_gear(Main_States_t current_state);
-U32 calc_target_RPM();
+U32 calc_target_RPM(gear_t target_gear);
 bool validate_target_RPM();
 bool calc_validate_upshift();
 
 void set_clutch_solenoid(solenoid_position_t position);
-void set_slow_drop(bool state);
+void set_slow_clutch_drop(bool state);
 void set_upshift_solenoid(solenoid_position_t position);
 void set_downshift_solenoid(solenoid_position_t position);
 void set_spark_cut(bool state);
