@@ -37,4 +37,6 @@ void init(CAN_HandleTypeDef* hcan_ptr);
 void can_buffer_handling_loop();
 void main_loop();
 
+#define GEAR_UPDATE_TIME_MS 25
+
 #endif

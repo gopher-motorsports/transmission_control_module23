@@ -32,6 +32,11 @@ typedef struct tcm_data_struct
 	gear_t current_gear;
 	gear_t target_gear;
 
+	U8 fast_clutch;
+	U8 slow_clutch;
+	U8 sw_upshift;
+	U8 sw_downshift;
+
 	bool currently_moving;	// Is the car moving?
 	bool gear_established;	// Gear established - Used for determining gear upon startup
 	bool using_clutch;		// Are we using the clutch for this shift?
@@ -54,15 +59,16 @@ void update_tcm_data(void);
 float get_trans_speed();
 float get_ave_wheel_speed();
 U32 get_RPM();
+void reach_target_RPM_spark_cut(uint32_t target_rpm);
 void check_buttons_and_set_clutch_sol(solenoid_position_t position);
 void safe_spark_cut(bool state);
 float get_ave_rpm();
 float current_trans_wheel_ratio(void);
 float current_RPM_trans_ratio();
-gear_t get_current_gear(Main_States_t current_state);
+gear_t get_current_gear(float gear_pot_pos);
 U32 calc_target_RPM(gear_t target_gear);
 bool validate_target_RPM();
-bool calc_validate_upshift();
+bool calc_validate_upshift(gear_t current_gear, U8 fast_clutch, U8 slow_clutch);
 
 void set_clutch_solenoid(solenoid_position_t position);
 void set_slow_clutch_drop(bool state);
