@@ -4,6 +4,7 @@
 #include "GopherCAN_devboard_example.h"
 #include "main.h"
 #include "gopher_sense.h"
+#include "pulse_sensor.h"
 #include <stdio.h>
 
 // the HAL_CAN struct. This example only works for a single CAN bus
