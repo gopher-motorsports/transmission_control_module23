@@ -23,7 +23,7 @@ static Upshift_States_t upshift_State;
 static Downshift_States_t downshift_State;
 U8 last_button_state = 0;
 static Upshift_States_t lastUpshiftState;
-static Downshift_States_t lastUpshiftState;
+static Downshift_States_t lastDownshiftState;
 static U32 lastShiftingChangeTick;
 
 // the CAN callback function used in this example
@@ -34,6 +34,7 @@ static void run_upshift_sm(void);
 static void run_downshift_sm(void);
 static void check_driver_inputs(void);
 static void clutch_task(U8 fastClutch, U8 slowClutch);
+static void shifting_task();
 
 // init
 //  What needs to happen on startup in order to run GopherCAN
@@ -82,6 +83,7 @@ void main_loop()
 	static U32 lastHeartbeat = 0;
 	static U32 lastPrintHB = 0;
 	static U32 lastTCMDataUpdate = 0;
+	static uint32_t last_gear_update = 0;
 
 	if (HAL_GetTick() - lastHeartbeat > HEARTBEAT_MS_BETWEEN)
 	{
@@ -89,8 +91,15 @@ void main_loop()
 		HAL_GPIO_TogglePin(HBEAT_GPIO_Port, HBEAT_Pin);
 	}
 
+	if (HAL_GetTick() - last_gear_update >= GEAR_UPDATE_TIME_MS)
+	{
+		last_gear_update = HAL_GetTick();
+		tcm_data.current_gear = get_current_gear(gearPosition_mm.data);
+	}
+
 	updateAndQueueParams();
 	check_driver_inputs();
+	shifting_task();
 
 	// send the current tick over UART every second
 	if (HAL_GetTick() - lastPrintHB >= PRINTF_HB_MS_BETWEEN)
@@ -103,6 +112,8 @@ void main_loop()
 		// Update shift struct with relevant data
 		update_tcm_data();
 	}
+
+
 }
 
 // Updates gcan variables
@@ -155,6 +166,78 @@ static void check_driver_inputs() {
 	}
 }
 
+static void shifting_task() {
+	switch (main_State)
+	{
+	case ST_IDLE:
+		// in idle state, make sure we are not spark cutting and not pushing
+		// the solenoid
+		set_spark_cut(false);
+
+		// NOTE: potentially use the opposite solenoid to push the shift lever
+		// back into a neutral position quicker. This would use more air but
+		// would allow us to shift again much sooner. We would need to make
+		// sure the shift position is valid before doing this to prevent
+		// always pushing the shift lever into a shifting position during
+		// idle state
+
+		// TODO WARNING this will mean shifting will not work if the shift
+		// pot gets disconnected as the lever will push one way
+		if (get_shift_pot_pos() > LEVER_NEUTRAL_POS_MM + LEVER_NEUTRAL_TOLERANCE)
+		{
+			// shifter pos is too high. Bring it back down
+			set_upshift_solenoid(SOLENOID_OFF);
+			set_downshift_solenoid(SOLENOID_ON);
+		}
+		else if (get_shift_pot_pos() < LEVER_NEUTRAL_POS_MM - LEVER_NEUTRAL_TOLERANCE)
+		{
+			// shifter pos is too low. Bring it up
+			set_upshift_solenoid(SOLENOID_ON);
+			set_downshift_solenoid(SOLENOID_OFF);
+		}
+		else
+		{
+			// we good. Levers off
+			set_upshift_solenoid(SOLENOID_OFF);
+			set_downshift_solenoid(SOLENOID_OFF);
+		}
+
+		// start a downshift if there is one pending. This means that a new
+		// shift can be queued during the last shift
+		if (swDownshift_state.data)
+		{
+			swDownshift_state.data = 0;
+			// TODO: Re-implement
+//			if (calc_validate_downshift(car_shift_data.current_gear, sw_clutch_fast, sw_clutch_slow))
+//			{
+				main_State = ST_HDL_DOWNSHIFT;
+				downshift_State = ST_D_BEGIN_SHIFT;
+//			}
+		}
+
+		// same for upshift. Another shift can be queued
+		if (swUpshift_state.data)
+		{
+			swUpshift_state.data = 0;
+			// TODO: Re-implement
+//			if (calc_validate_upshift(car_shift_data.current_gear, sw_clutch_fast, sw_clutch_slow))
+//			{
+				main_State = ST_HDL_UPSHIFT;
+				upshift_State = ST_U_BEGIN_SHIFT;
+//			}
+		}
+		break;
+
+	case ST_HDL_UPSHIFT:
+		run_upshift_sm();
+		break;
+
+	case ST_HDL_DOWNSHIFT:
+		run_downshift_sm();
+		break;
+	}
+}
+
 // clutch_task
 //  for use in the main task. Sets the slow and fast drop accordingly and handles
 //  clutch position if in ST_IDLE
@@ -162,14 +245,14 @@ static void clutch_task(U8 fastClutch, U8 slowClutch) {
 	static bool using_slow_drop = false;
 	// normal clutch button must not be pressed when using slow drop. Fast drop is
 	// given priority
-	if (swFastClutch_state.data) using_slow_drop = false;
+	if (fastClutch) using_slow_drop = false;
 
 	// if the slow drop button is pressed latch the slow drop
-	else if (swSlowClutch_state.data) using_slow_drop = true;
+	else if (slowClutch) using_slow_drop = true;
 
 	// If either clutch button pressed then enable solenoid. Always turn it on regardless of
 	// if we are shifting or not
-	if (swFastClutch_state.data || swSlowClutch_state.data)
+	if (fastClutch || slowClutch)
 	{
 		set_clutch_solenoid(SOLENOID_ON);
 		return;
@@ -178,7 +261,7 @@ static void clutch_task(U8 fastClutch, U8 slowClutch) {
 	// If neither clutch button pressed and we are in IDLE and not in anti stall
 	// close clutch solenoid. This will cause clutch presses to latch to the end
 	// of a shift
-	if (!(swFastClutch_state.data || swSlowClutch_state.data)
+	if (!(fastClutch || slowClutch)
 			&& main_State == ST_IDLE && tcm_data.anti_stall)
 	{
 		set_clutch_solenoid(SOLENOID_OFF);
@@ -566,8 +649,8 @@ static void run_downshift_sm(void)
 		tcm_data.successful_shift = true; // TODO figure out what happens with this during time based
 
 		// move on to loading the shift lever
-		car_Downshift_State = ST_D_LOAD_SHIFT_LVR;
-
+		downshift_State = ST_D_LOAD_SHIFT_LVR;
+		
 		// Debug
 		printf("=== Downshift State: LOAD_SHIFT_LVR\n");
 		printf("How: Completed begin shift steps\n");
@@ -620,7 +703,7 @@ static void run_downshift_sm(void)
 			{
 				// we have left the last gear and are in a false neutral. Move on to
 				// the next part of the shift
-				car_Downshift_State = ST_D_ENTER_GEAR;
+				downshift_State = ST_D_ENTER_GEAR;
 				begin_enter_gear_tick = HAL_GetTick();
 
 
@@ -637,7 +720,7 @@ static void run_downshift_sm(void)
 			if (HAL_GetTick() - begin_exit_gear_tick > DOWNSHIFT_EXIT_TIMEOUT_MS)
 			{
 				// We could not release the gear for some reason. Keep trying anyway
-				car_Downshift_State = ST_D_ENTER_GEAR;
+				downshift_State = ST_D_ENTER_GEAR;
 				begin_enter_gear_tick = HAL_GetTick();
 
 				// if we were not using the clutch before, start using it now because
@@ -674,7 +757,7 @@ static void run_downshift_sm(void)
 		// and the RPM goes too high to enter the next gear
 		set_downshift_solenoid(SOLENOID_ON);
 		set_clutch_solenoid(tcm_data.using_clutch ? SOLENOID_ON : SOLENOID_OFF);
-		reach_target_RPM_spark_cut(tcm_data.target_RPM); // TODO
+		//reach_target_RPM_spark_cut(tcm_data.target_RPM); // TODO
 
 		if (!tcm_data.time_shift_only)
 		{
@@ -746,7 +829,7 @@ static void run_downshift_sm(void)
 		if (HAL_GetTick() - begin_hold_clutch_tick > DOWNSHIFT_FAIL_EXTRA_CLUTCH_HOLD)
 		{
 			// done giving the extra clutch. Move on to finishing the shift
-			car_Downshift_State = ST_D_FINISH_SHIFT;
+			downshift_State = ST_D_FINISH_SHIFT;
 			finish_shift_start_tick = HAL_GetTick();
 
 			// Debug

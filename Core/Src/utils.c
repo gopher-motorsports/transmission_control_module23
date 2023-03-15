@@ -48,6 +48,27 @@ U32 get_RPM() {
 	return engineRPM_rpm.data;
 }
 
+// reach_target_RPM_spark_cut
+//  if the current RPM is higher than the target RPM, spark cut the engine. All
+//  safeties are performed in spark_cut
+void reach_target_RPM_spark_cut(uint32_t target_rpm)
+{
+	// if the target RPM is too low, do not spark cut
+	if (target_rpm < MIN_SPARK_CUT_RPM)
+	{
+		safe_spark_cut(false);
+	}
+
+	// if the current RPM is higher than the target RPM, spark cut to reach it
+	else if (tcm_data.current_RPM > target_rpm)
+	{
+		safe_spark_cut(true);
+	}
+	else
+	{
+		safe_spark_cut(false);
+	}
+}
 
 // check_buttons_and_set_clutch_sol
 //  for use of clutch during shifting. This will make sure the driver is not pressing
@@ -109,13 +130,13 @@ float current_RPM_trans_ratio() {
 // Uses the positions declared in GEAR_POT_DISTANCES_mm which are set in shift_parameters.h
 // and interpolates between them to determine the gear state
 //TODO: TEST THIS BEFORE ATTEMPTING TO RUN - MATH IS PROBABLY WRONG
-gear_t get_current_gear(Main_States_t current_state)
+gear_t get_current_gear(float gear_pot_pos)
 {
 	// Search algorithm searches for if the gear position is less than a gear position distance
 	// plus the margin (0.1mm), and if it finds it, then checks if the position is right on the gear
 	// or between it and the last one by checking if the position is less than the declared
 	// distance minus the margin (0.1mm)
-	uint8_t gear_position = get_gear_pot_pos();
+	uint8_t gear_position = gear_pot_pos;
 	for(int i = 1; i < NUM_GEARS / 2; i++) {
 		if (gear_position <= GEAR_POT_DISTANCES_mm[i] + GEAR_POS_MARGIN_mm) {
 			if (gear_position <= GEAR_POT_DISTANCES_mm[i] - GEAR_POS_MARGIN_mm) {
@@ -132,7 +153,28 @@ gear_t get_current_gear(Main_States_t current_state)
 //  Using target gear and wheel speed return the RPM we need to hit to enter that
 //  gear
 U32 calc_target_RPM(gear_t target_gear) {
-	return 0; // TODO
+	// If car isn't moving then there isn't a target RPM
+	if (!tcm_data.currently_moving)
+	{
+		return 0;
+	}
+
+	switch (target_gear)
+	{
+	case GEAR_1:
+	case GEAR_2:
+	case GEAR_3:
+	case GEAR_4:
+	case GEAR_5:
+		// This formula holds regardless of whether or not the clutch is pressed
+		return get_ave_wheel_speed(DEFAULT_WHEEL_SPEED_AVE_TIME_ms) * gear_ratios[target_gear - 1];
+
+	case NEUTRAL:
+	case ERROR_GEAR:
+	default:
+		// If we are in ERROR GEAR or shifting into neutral no target RPM
+		return 0;
+	}
 }
 
 // validate_target_RPM
@@ -144,8 +186,40 @@ bool validate_target_RPM() {
 // calc_validate_upshift
 //  will check if an upshift is valid in the current state of the car. Will also
 //  set the target gear and target RPM if the shift is valid
-bool calc_validate_upshift() {
-	return false; // TODO
+//  TODO: Deal with in-between gears
+bool calc_validate_upshift(gear_t current_gear, U8 fast_clutch, U8 slow_clutch) {
+	switch (current_gear)
+		{
+		case NEUTRAL:
+			// Clutch must be pressed to go from NEUTRAL -> 1st
+			if (fast_clutch || slow_clutch)
+			{
+				tcm_data.target_RPM = 0;
+				tcm_data.target_gear = GEAR_1;
+				return true;
+			}
+			else
+			{
+				return false;
+			}
+
+		case GEAR_1:
+		case GEAR_2:
+		case GEAR_3:
+		case GEAR_4:
+			tcm_data.target_gear = current_gear + 1;
+			tcm_data.target_RPM = calc_target_RPM(tcm_data.target_gear);
+			// always allow shifts for now
+			//return validate_target_RPM();
+			return true;
+
+		case GEAR_5:
+		case ERROR_GEAR:
+		default:
+			tcm_data.target_gear = ERROR_GEAR;
+			tcm_data.target_RPM = 0;
+			return true;
+		}
 }
 
 void set_clutch_solenoid(solenoid_position_t position)
