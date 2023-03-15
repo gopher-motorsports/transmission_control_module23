@@ -81,8 +81,6 @@ void Error_Handler(void);
 #define SLOW_CLUTCH_SOL_GPIO_Port GPIOC
 #define AUX1_C_Pin GPIO_PIN_5
 #define AUX1_C_GPIO_Port GPIOB
-#define SPK_CUT_Pin GPIO_PIN_6
-#define SPK_CUT_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
