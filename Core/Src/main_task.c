@@ -37,6 +37,8 @@ static void run_downshift_sm(void);
 static void check_driver_inputs(void);
 static void clutch_task(U8 fastClutch, U8 slowClutch);
 static void shifting_task();
+static void readPinOutputs();
+static void setArtificialInputs();
 
 #define NUM_PINS 8
 
@@ -97,6 +99,8 @@ static void readPinOutputs() {
 				case 7:
 					strncpy(pinName, "AUX1_T", 20*sizeof(char));
 					break;
+				default:
+					break;
 			}
 
 			printf("%s Toggled: %u\n", pinName, GPIOPin[i]);
@@ -106,8 +110,13 @@ static void readPinOutputs() {
 		}
 		lastGPIOPin[i] = GPIOPin[i];
 	}
+}
+
+static void setArtificialInputs() {
 
 }
+
+
 
 // init
 //  What needs to happen on startup in order to run GopherCAN
@@ -197,8 +206,8 @@ static void updateAndQueueParams(void) {
 	update_and_queue_param_u8(&tcmCurrentlyMoving_state, tcm_data.currently_moving);
 	update_and_queue_param_u8(&tcmAntiStallActive_state, tcm_data.anti_stall);
 	update_and_queue_param_u8(&tcmUsingClutch_state, tcm_data.using_clutch);
-	update_and_queue_param_u8(&tcmTimeShiftOnly_state, tcm_data.time_shift_only);
-	update_and_queue_param_u8(&tcmClutchlessDownshift_state, tcm_data.clutchless_downshift);
+//	update_and_queue_param_u8(&tcmTimeShiftOnly_state, tcm_data.time_shift_only);
+//	update_and_queue_param_u8(&tcmClutchlessDownshift_state, tcm_data.clutchless_downshift);
 
 	switch (main_State)
 	{
