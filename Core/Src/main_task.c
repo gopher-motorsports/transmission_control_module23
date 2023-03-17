@@ -121,7 +121,8 @@ static void updateAndQueueParams(void) {
 	update_and_queue_param_u8(&tcmCurrentlyMoving_state, tcm_data.currently_moving);
 	update_and_queue_param_u8(&tcmAntiStallActive_state, tcm_data.anti_stall);
 	update_and_queue_param_u8(&tcmUsingClutch_state, tcm_data.using_clutch);
-	//update_and_queue_param_u8(&tcmShiftState_state, tcm_data.shift_mode);
+	update_and_queue_param_u8(&tcmTimeShiftOnly_state, tcm_data.time_shift_only);
+	update_and_queue_param_u8(&tcmClutchlessDownshift_state, tcm_data.clutchless_downshift);
 
 	switch (main_State)
 	{
