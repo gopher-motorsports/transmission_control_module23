@@ -7,6 +7,7 @@
 #include "gopher_sense.h"
 #include <stdio.h>
 #include "shift_parameters.h"
+#include <string.h>
 
 // the HAL_CAN struct. This example only works for a single CAN bus
 CAN_HandleTypeDef* example_hcan;
@@ -24,7 +25,8 @@ static Downshift_States_t downshift_State;
 U8 last_button_state = 0;
 static Upshift_States_t lastUpshiftState;
 static Downshift_States_t lastDownshiftState;
-static U32 lastShiftingChangeTick;
+static U32 lastShiftingChangeTick = 0;
+static U32 lastPinChangeTick = 0;
 
 // the CAN callback function used in this example
 static void change_led_state(U8 sender, void* UNUSED_LOCAL_PARAM, U8 remote_param, U8 UNUSED1, U8 UNUSED2, U8 UNUSED3);
@@ -35,6 +37,77 @@ static void run_downshift_sm(void);
 static void check_driver_inputs(void);
 static void clutch_task(U8 fastClutch, U8 slowClutch);
 static void shifting_task();
+
+#define NUM_PINS 8
+
+static U8 GPIOPin[8] = {0};
+static U8 lastGPIOPin[8] = {0};
+
+//static U8 SpkCutPinRead;
+//static U8 SlowClutchPinRead;
+//static U8 ClutchSolPinRead;
+//static U8 DownshiftSolPinRead;
+//static U8 UpshiftSolPinRead;
+//static U8 Aux1CPinRead;
+//static U8 Aux2CPinRead;
+//static U8 Aux1TPinRead;
+
+static void readPinOutputs() {
+//	SpkCutPinRead = HAL_GPIO_ReadPin(SPK_CUT_GPIO_Port, SPK_CUT_Pin, 0);
+//	SlowClutchPinRead = HAL_GPIO_ReadPin(SLOW_CLUTCH_SOL_GPIO_Port, SLOW_CLUTCH_SOL_Pin, 0);
+//	ClutchSolPinRead = HAL_GPIO_ReadPin(CLUTCH_SOL_GPIO_Port, CLUTCH_SOL_Pin, 0);
+//	DownshiftSolPinRead = HAL_GPIO_ReadPin(DOWNSHIFT_SOL_GPIO_Port, DOWNSHIFT_SOL_Pin, 0);
+//	UpshiftSolPinRead = HAL_GPIO_ReadPin(UPSHIFT_SOL_GPIO_Port, UPSHIFT_SOL_Pin, 0);
+//	Aux1CPinRead = HAL_GPIO_ReadPin(AUX1_C_GPIO_Port, AUX1_C_Pin, 0);
+//	Aux2CPinRead = HAL_GPIO_ReadPin(AUX2_C_GPIO_Port, AUX2_C_Pin, 0);
+//	Aux1TPinRead = HAL_GPIO_ReadPin(AUX1_T_GPIO_Port, AUX1_T_Pin, 0);
+
+	GPIOPin[0] = HAL_GPIO_ReadPin(SPK_CUT_GPIO_Port, SPK_CUT_Pin);
+	GPIOPin[1] = HAL_GPIO_ReadPin(SLOW_CLUTCH_SOL_GPIO_Port, SLOW_CLUTCH_SOL_Pin);
+	GPIOPin[2] = HAL_GPIO_ReadPin(CLUTCH_SOL_GPIO_Port, CLUTCH_SOL_Pin);
+	GPIOPin[3] = HAL_GPIO_ReadPin(DOWNSHIFT_SOL_GPIO_Port, DOWNSHIFT_SOL_Pin);
+	GPIOPin[4] = HAL_GPIO_ReadPin(UPSHIFT_SOL_GPIO_Port, UPSHIFT_SOL_Pin);
+	GPIOPin[5] = HAL_GPIO_ReadPin(AUX1_C_GPIO_Port, AUX1_C_Pin);
+	GPIOPin[6] = HAL_GPIO_ReadPin(AUX2_C_GPIO_Port, AUX2_C_Pin);
+	GPIOPin[7] = HAL_GPIO_ReadPin(AUX1_T_GPIO_Port, AUX1_T_Pin);
+
+	for(int i = 0; i < NUM_PINS; i++) {
+		if(GPIOPin[i] != lastGPIOPin[i]) {
+			char pinName[20];
+
+			switch(i) {
+				case 1:
+					strncpy(pinName, "SPK_CUT", 20*sizeof(char));
+					break;
+				case 2:
+					strncpy(pinName, "SLOW_CLUTCH_SOL", 20*sizeof(char));
+					break;
+				case 3:
+					strncpy(pinName, "DOWNSHIFT_SOL", 20*sizeof(char));
+					break;
+				case 4:
+					strncpy(pinName, "UPSHIFT_SOL", 20*sizeof(char));
+					break;
+				case 5:
+					strncpy(pinName, "AUX1_C", 20*sizeof(char));
+					break;
+				case 6:
+					strncpy(pinName, "AUX2_C", 20*sizeof(char));
+					break;
+				case 7:
+					strncpy(pinName, "AUX1_T", 20*sizeof(char));
+					break;
+			}
+
+			printf("%s Toggled: %u\n", pinName, GPIOPin[i]);
+			printf("Current Tick: %lu\n", HAL_GetTick());
+			printf("Distance From Last Pin Change: %lu\n", HAL_GetTick() - lastPinChangeTick);
+			lastPinChangeTick = HAL_GetTick();
+		}
+		lastGPIOPin[i] = GPIOPin[i];
+	}
+
+}
 
 // init
 //  What needs to happen on startup in order to run GopherCAN
