@@ -38,11 +38,11 @@
 /* USER CODE BEGIN PD */
 
 #define IC_TIMER &htim3
-#define IC_TIMER_PERIOD_NS 100
-#define IC_CONVERSION_RATIO 30.0f
+#define IC_CONVERSION_RATIO 2.0f //(X pulses / 1 sec) * (60 sec / 1 min) * (1 rev / 30 pulses) = RPM, so conversion ration would be 60/30 = 2.
+#define DMA_STOPPED_TIMEOUT_MS 150
 #define USE_VAR_SS true
-#define IC_LOW_SAMPLES 2
-#define IC_HIGH_SAMPLES 1500
+#define IC_LOW_SAMPLES 500
+#define IC_HIGH_SAMPLES 10000
 #define MIN_SAMPLES 5
 
 /* USER CODE END PD */
@@ -162,22 +162,22 @@ int main(void)
   setup_timer_and_start_dma_vss(
 		  IC_TIMER,
  		  TIM_CHANNEL_1,
- 		  IC_TIMER_PERIOD_NS,
  		  IC_CONVERSION_RATIO,
  		  &resultStoreLocation1,
+		  DMA_STOPPED_TIMEOUT_MS,
  		  USE_VAR_SS,
  		  IC_LOW_SAMPLES,
  		  IC_HIGH_SAMPLES,
 		  MIN_SAMPLES
    );
-
-  setup_timer_and_start_dma(
-		  &htim4,
- 		  TIM_CHANNEL_1,
- 		  IC_TIMER_PERIOD_NS,
- 		  50,
- 		  &resultStoreLocation2
-   );
+//
+//  setup_timer_and_start_dma(
+//		  &htim4,
+// 		  TIM_CHANNEL_1,
+// 		  IC_TIMER_PERIOD_NS,
+// 		  50,
+// 		  &resultStoreLocation2
+//   );
 
   // Set initial output states so nothing is floating
   //HAL_GPIO_WritePin(SPK_CUT_GPIO_Port, SPK_CUT_Pin, 0);
@@ -414,7 +414,7 @@ static void MX_TIM3_Init(void)
 
   /* USER CODE END TIM3_Init 1 */
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 80;
+  htim3.Init.Prescaler = 80-1;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim3.Init.Period = 0xffff;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
