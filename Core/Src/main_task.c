@@ -113,7 +113,9 @@ static void readPinOutputs() {
 }
 
 static void setArtificialInputs() {
-
+	gearPosition_mm.data = 1.05;
+	clutchPosition_mm.data = 27.0;
+	shifterPosition_mm.data = 37.05;
 }
 
 
@@ -243,9 +245,14 @@ static void check_driver_inputs() {
 		tcm_data.clutchless_downshift = !tcm_data.clutchless_downshift;
 	}
 
+	tcm_data.sw_downshift = swDownshift_state.data;
+	tcm_data.sw_upshift =  swUpshift_state.data;
+	tcm_data.sw_fast_clutch = swFastClutch_state.data;
+	tcm_data.sw_slow_clutch = swSlowClutch_state.data;
+
 	// Check if clutch buttons are pressed and then run clutch task, benefit of being able to be skipped over if used for special input sequences
-	if(swFastClutch_state.data || swSlowClutch_state.data) {
-		clutch_task(swFastClutch_state.data, swSlowClutch_state.data);
+	if(tcm_data.sw_fast_clutch || tcm_data.sw_slow_clutch) {
+		clutch_task(tcm_data.sw_fast_clutch, tcm_data.sw_slow_clutch);
 	}
 }
 
@@ -266,24 +273,25 @@ static void shifting_task() {
 
 		// TODO WARNING this will mean shifting will not work if the shift
 		// pot gets disconnected as the lever will push one way
-		if (get_shift_pot_pos() > LEVER_NEUTRAL_POS_MM + LEVER_NEUTRAL_TOLERANCE)
-		{
-			// shifter pos is too high. Bring it back down
-			set_upshift_solenoid(SOLENOID_OFF);
-			set_downshift_solenoid(SOLENOID_ON);
-		}
-		else if (get_shift_pot_pos() < LEVER_NEUTRAL_POS_MM - LEVER_NEUTRAL_TOLERANCE)
-		{
-			// shifter pos is too low. Bring it up
-			set_upshift_solenoid(SOLENOID_ON);
-			set_downshift_solenoid(SOLENOID_OFF);
-		}
-		else
-		{
-			// we good. Levers off
-			set_upshift_solenoid(SOLENOID_OFF);
-			set_downshift_solenoid(SOLENOID_OFF);
-		}
+		// TODO Re-implement once sensors implemented correctly
+//		if (get_shift_pot_pos() > LEVER_NEUTRAL_POS_MM + LEVER_NEUTRAL_TOLERANCE)
+//		{
+//			// shifter pos is too high. Bring it back down
+//			set_upshift_solenoid(SOLENOID_OFF);
+//			set_downshift_solenoid(SOLENOID_ON);
+//		}
+//		else if (get_shift_pot_pos() < LEVER_NEUTRAL_POS_MM - LEVER_NEUTRAL_TOLERANCE)
+//		{
+//			// shifter pos is too low. Bring it up
+//			set_upshift_solenoid(SOLENOID_ON);
+//			set_downshift_solenoid(SOLENOID_OFF);
+//		}
+//		else
+//		{
+//			// we good. Levers off
+//			set_upshift_solenoid(SOLENOID_OFF);
+//			set_downshift_solenoid(SOLENOID_OFF);
+//		}
 
 		// start a downshift if there is one pending. This means that a new
 		// shift can be queued during the last shift
@@ -427,9 +435,6 @@ static void run_upshift_sm(void)
 		initial_gear = get_current_gear(main_State);
 		set_upshift_solenoid(SOLENOID_ON); // start pushing upshift
 
-		// reset information about the shift
-		tcm_data.successful_shift = true;
-
 		// move on to waiting for the "preload" time to end
 		upshift_State = ST_U_LOAD_SHIFT_LVR;
 
@@ -519,8 +524,8 @@ static void run_upshift_sm(void)
 				begin_enter_gear_tick = HAL_GetTick();
 
 				// Debug
-				printf("=== Time Shit Only Upshift State: ENTER_GEAR");
-				printf("How: Exit gear time completed");
+				printf("=== Time Shit Only Upshift State: ENTER_GEAR\n");
+				printf("How: Exit gear time completed\n");
 				printf("Current Tick: %lu\n", HAL_GetTick());
 				printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
 				lastShiftingChangeTick = HAL_GetTick();
@@ -545,11 +550,11 @@ static void run_upshift_sm(void)
 				HAL_GetTick() - begin_exit_gear_spark_return_tick > UPSHIFT_EXIT_SPARK_RETURN_MS)
 		{
 			// Debug
-			printf("=== Upshift State: ENTER_GEAR");
+			printf("=== Upshift State: ENTER_GEAR\n");
 			if(get_shift_pot_pos() > UPSHIFT_EXIT_POS_MM) {
-				printf("How: Shifter moved above threshold of exiting");
+				printf("How: Shifter moved above threshold of exiting\n");
 			} else {
-				printf("How: Spark return timed out");
+				printf("How: Spark return timed out\n");
 			}
 			printf("Current Tick: %lu\n", HAL_GetTick());
 			printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
@@ -589,8 +594,8 @@ static void run_upshift_sm(void)
 				finish_shift_start_tick = HAL_GetTick();
 
 				// Debug
-				printf("=== Upshift State: FINISH_SHIFT");
-				printf("How: Shifter position moved past threshold");
+				printf("=== Upshift State: FINISH_SHIFT\n");
+				printf("How: Shifter position moved past threshold\n");
 				printf("Current Tick: %lu\n", HAL_GetTick());
 				printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
 				lastShiftingChangeTick = HAL_GetTick();
@@ -607,8 +612,8 @@ static void run_upshift_sm(void)
 				finish_shift_start_tick = HAL_GetTick();
 
 				// Debug
-				printf("=== Upshift State: FINISH_SHIFT");
-				printf("How: Enter Gear timed out");
+				printf("=== Upshift State: FINISH_SHIFT\n");
+				printf("How: Enter Gear timed out\n");
 				printf("Current Tick: %lu\n", HAL_GetTick());
 				printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
 				lastShiftingChangeTick = HAL_GetTick();
@@ -622,8 +627,8 @@ static void run_upshift_sm(void)
 				finish_shift_start_tick = HAL_GetTick();
 
 				// Debug
-				printf("=== Timed Shift Only Upshift State: FINISH_SHIFT");
-				printf("How: Enter Gear time completed");
+				printf("=== Timed Shift Only Upshift State: FINISH_SHIFT\n");
+				printf("How: Enter Gear time completed\n");
 				printf("Current Tick: %lu\n", HAL_GetTick());
 				printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
 				lastShiftingChangeTick = HAL_GetTick();
@@ -638,62 +643,31 @@ static void run_upshift_sm(void)
 		// on ending the shift while still pushing on the shift lever
 		set_upshift_solenoid(SOLENOID_ON);
 
-		// make sure enough time has passed from the beginning of the shift
-		if (HAL_GetTick() - spark_cut_start_time < UPSHIFT_MIN_TIME)
-		{
-			// not enough time has passed. Keep spark cutting for a bit longer
-			safe_spark_cut(true);
-			break;
-		}
-		else
-		{
-			// enough time has passed to finish the shift. Call the shift
-			// over but keep pushing as there is no downside other than the
-			// extra time the shift lever will take to return, preventing from
-			// starting another shift
-			safe_spark_cut(false);
-			tcm_data.using_clutch = false;
+		// enough time has passed to finish the shift. Call the shift
+		// over but keep pushing as there is no downside other than the
+		// extra time the shift lever will take to return, preventing from
+		// starting another shift
+		safe_spark_cut(false);
+		tcm_data.using_clutch = false;
 
-			if (!tcm_data.time_shift_only)
-			{
-				if (tcm_data.successful_shift)
-				{
-					tcm_data.current_gear = tcm_data.target_gear;
-				}
-				else
-				{
-					tcm_data.current_gear = ERROR_GEAR;
-					tcm_data.gear_established = false;
-				}
-			}
-			// if time based shifting and the gear didn't correctly increase,
-			// declare unsuccessful
-			else
-			{
-				tcm_data.current_gear = get_current_gear(main_State);
-				if (!(tcm_data.current_gear > initial_gear))
-				{
-					tcm_data.successful_shift = false;
-					tcm_data.gear_established = false;
-				}
-			}
+		// if the gear didn't correctly increase,
+		// declare unsuccessful
+		tcm_data.current_gear = get_current_gear(main_State);
 
-			// check if we can disable the solenoid and return to to idle
-			if (HAL_GetTick() - finish_shift_start_tick >= UPSHIFT_EXTRA_PUSH_TIME)
-			{
-				// done with the upshift state machine
-				set_upshift_solenoid(SOLENOID_OFF);
-				main_State = ST_IDLE;
+		// Determine if the shift was successful by checking if we changed gear correctly
+		tcm_data.successful_shift = tcm_data.current_gear > initial_gear;
+		tcm_data.gear_established = tcm_data.successful_shift;
 
-				// Debug
-				printf("=== Main State: IDLE\n");
-				printf("How: Extra time passed\n");
-				printf("Current Tick: %lu\n", HAL_GetTick());
-				printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
-				lastShiftingChangeTick = HAL_GetTick();
-			}
-		}
-		break;
+		// done with the upshift state machine
+		set_upshift_solenoid(SOLENOID_OFF);
+		main_State = ST_IDLE;
+
+		// Debug
+		printf("=== Main State: IDLE\n");
+		printf("How: Finish Shift functions completed\n");
+		printf("Current Tick: %lu\n", HAL_GetTick());
+		printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
+		lastShiftingChangeTick = HAL_GetTick();
 	}
 }
 
@@ -727,9 +701,6 @@ static void run_downshift_sm(void)
 		//tcm_data.using_clutch = (car_buttons.clutch_fast_button || car_buttons.clutch_slow_button);
 
 		set_clutch_solenoid(tcm_data.using_clutch ? SOLENOID_ON : SOLENOID_OFF);
-
-		// reset the shift parameters
-		tcm_data.successful_shift = true; // TODO figure out what happens with this during time based
 
 		// move on to loading the shift lever
 		downshift_State = ST_D_LOAD_SHIFT_LVR;
@@ -872,7 +843,6 @@ static void run_downshift_sm(void)
 				tcm_data.using_clutch = true;
 				set_clutch_solenoid(SOLENOID_ON);
 				safe_spark_cut(false);
-				tcm_data.successful_shift = false;
 				downshift_State = ST_D_HOLD_CLUTCH;
 				begin_hold_clutch_tick = HAL_GetTick();
 
@@ -931,67 +901,25 @@ static void run_downshift_sm(void)
 		// ensure the shift completes
 		set_downshift_solenoid(SOLENOID_ON);
 
-		// check if we have been in the shift for long enough. This is
-		// to prevent a failure mode where the shifter is inaccurate and in
-		// a position that makes it seem like the shift finished right
-		// away
-		if (HAL_GetTick() - begin_shift_tick < DOWNSHIFT_MIN_SHIFT_TIME)
-		{
-			// keep the shift going, clutch included if that is needed. No spark
-			// cut though, we want to give drivers control of the shift
-			set_clutch_solenoid(tcm_data.using_clutch ? SOLENOID_ON : SOLENOID_OFF);
-			safe_spark_cut(false);
-			break;
-		}
-		else
-		{
-			// enough time has passed to finish the shift. Call the shift
-			// over but keep pushing as there is no downside other than the
-			// extra time the shift lever will take to return, preventing from
-			// starting another shift
-			safe_spark_cut(false);
-			set_clutch_solenoid(SOLENOID_OFF);
-			tcm_data.using_clutch = false;
+		safe_spark_cut(false);
+		set_clutch_solenoid(SOLENOID_OFF);
+		tcm_data.using_clutch = false;
 
-			if (!tcm_data.time_shift_only)
-			{
-				if (tcm_data.successful_shift)
-				{
-					tcm_data.current_gear = tcm_data.target_gear;
-				}
-				else
-				{
-					tcm_data.current_gear = ERROR_GEAR;
-					tcm_data.gear_established = false;
-				}
+		// Determine if the shift was successful by checking if we changed gear correctly
+		tcm_data.successful_shift = tcm_data.current_gear < initial_gear;
+		tcm_data.gear_established = tcm_data.successful_shift;
+		tcm_data.current_gear = get_current_gear(main_State);
 
-				// check if we can disable the solenoid and return to to idle
-				if (HAL_GetTick() - finish_shift_start_tick >= DOWNSHIFT_EXTRA_PUSH_TIME)
-				{
-					// done with the downshift state machine
-					set_upshift_solenoid(SOLENOID_OFF);
-					main_State = ST_IDLE;
+		// done with the downshift state machine
+		set_downshift_solenoid(SOLENOID_OFF);
+		main_State = ST_IDLE;
 
-					// Debug
-					printf("=== Main State: Idle\n");
-					printf("How: Finish Shift extra push time completed\n");
-					printf("Current Tick: %lu\n", HAL_GetTick());
-					printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
-					lastShiftingChangeTick = HAL_GetTick();
-				}
-			}
-			else
-			{
-				tcm_data.current_gear = get_current_gear(main_State);
-				if (!(tcm_data.current_gear < initial_gear))
-				{
-					tcm_data.successful_shift = false;
-					tcm_data.gear_established = false;
-				}
-			}
-
-		}
-		break;
+		// Debug
+		printf("=== Main State: Idle\n");
+		printf("How: Finish Shift functions completed\n");
+		printf("Current Tick: %lu\n", HAL_GetTick());
+		printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
+		lastShiftingChangeTick = HAL_GetTick();
 	}
 }
 

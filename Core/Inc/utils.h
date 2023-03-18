@@ -32,8 +32,8 @@ typedef struct tcm_data_struct
 	gear_t current_gear;
 	gear_t target_gear;
 
-	U8 fast_clutch;
-	U8 slow_clutch;
+	U8 sw_fast_clutch;
+	U8 sw_slow_clutch;
 	U8 sw_upshift;
 	U8 sw_downshift;
 
