@@ -85,6 +85,7 @@ static void MX_TIM10_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM4_Init(void);
+void activateStopPin(void);
 void task_MainTask(void const * argument);
 void task_BufferHandling(void const * argument);
 
@@ -156,7 +157,8 @@ int main(void)
  		  USE_VAR_SS,
  		  IC_LOW_SAMPLES,
  		  IC_HIGH_SAMPLES,
-		  MIN_SAMPLES
+		  MIN_SAMPLES,
+		  activateStopPin
    );
 
 //  setup_timer_and_start_dma(
@@ -229,6 +231,11 @@ int main(void)
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
+}
+
+void activateStopPin() {
+	HAL_GPIO_WritePin(AUX2_C_GPIO_Port, AUX2_C_Pin, 1);
+	HAL_GPIO_WritePin(AUX2_C_GPIO_Port, AUX2_C_Pin, 0);
 }
 
 /**
