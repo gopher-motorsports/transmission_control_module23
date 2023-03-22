@@ -39,10 +39,10 @@
 
 #define IC_TIMER &htim3
 #define IC_CONVERSION_RATIO 2.0f //(X pulses / 1 sec) * (60 sec / 1 min) * (1 rev / 30 pulses) = RPM, so conversion ration would be 60/30 = 2.
-#define DMA_STOPPED_TIMEOUT_MS 150
+#define DMA_STOPPED_TIMEOUT_MS 60
 #define USE_VAR_SS true
-#define IC_LOW_SAMPLES 500
-#define IC_HIGH_SAMPLES 10000
+#define IC_LOW_SAMPLES 100
+#define IC_HIGH_SAMPLES 1000
 #define MIN_SAMPLES 5
 
 /* USER CODE END PD */
@@ -66,20 +66,8 @@ DMA_HandleTypeDef hdma_tim4_ch1;
 
 UART_HandleTypeDef huart1;
 
-/* Definitions for main_task */
-osThreadId_t main_taskHandle;
-const osThreadAttr_t main_task_attributes = {
-  .name = "main_task",
-  .stack_size = 512 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
-/* Definitions for buffer_handling */
-osThreadId_t buffer_handlingHandle;
-const osThreadAttr_t buffer_handling_attributes = {
-  .name = "buffer_handling",
-  .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityAboveNormal,
-};
+osThreadId main_taskHandle;
+osThreadId buffer_handlingHandle;
 /* USER CODE BEGIN PV */
 
 float resultStoreLocation1 = 0;
@@ -97,8 +85,8 @@ static void MX_TIM10_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM4_Init(void);
-void task_MainTask(void *argument);
-void task_BufferHandling(void *argument);
+void task_MainTask(void const * argument);
+void task_BufferHandling(void const * argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -170,13 +158,21 @@ int main(void)
  		  IC_HIGH_SAMPLES,
 		  MIN_SAMPLES
    );
-//
+
+//  setup_timer_and_start_dma(
+//		  IC_TIMER,
+// 		  TIM_CHANNEL_1,
+// 		  IC_CONVERSION_RATIO,
+// 		  &resultStoreLocation1,
+//		  DMA_STOPPED_TIMEOUT_MS
+//   );
+
 //  setup_timer_and_start_dma(
 //		  &htim4,
 // 		  TIM_CHANNEL_1,
-// 		  IC_TIMER_PERIOD_NS,
-// 		  50,
-// 		  &resultStoreLocation2
+//		  2,
+//		  &resultStoreLocation2,
+//		  40
 //   );
 
   // Set initial output states so nothing is floating
@@ -190,9 +186,6 @@ int main(void)
   HAL_GPIO_WritePin(AUX1_T_GPIO_Port, AUX1_T_Pin, 0);
 
   /* USER CODE END 2 */
-
-  /* Init scheduler */
-  osKernelInitialize();
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
@@ -211,19 +204,17 @@ int main(void)
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* creation of main_task */
-  main_taskHandle = osThreadNew(task_MainTask, NULL, &main_task_attributes);
+  /* definition and creation of main_task */
+  osThreadDef(main_task, task_MainTask, osPriorityNormal, 0, 512);
+  main_taskHandle = osThreadCreate(osThread(main_task), NULL);
 
-  /* creation of buffer_handling */
-  buffer_handlingHandle = osThreadNew(task_BufferHandling, NULL, &buffer_handling_attributes);
+  /* definition and creation of buffer_handling */
+  osThreadDef(buffer_handling, task_BufferHandling, osPriorityAboveNormal, 0, 256);
+  buffer_handlingHandle = osThreadCreate(osThread(buffer_handling), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
-
-  /* USER CODE BEGIN RTOS_EVENTS */
-  /* add events, ... */
-  /* USER CODE END RTOS_EVENTS */
 
   /* Start scheduler */
   osKernelStart();
@@ -657,7 +648,7 @@ static void MX_GPIO_Init(void)
   * @retval None
   */
 /* USER CODE END Header_task_MainTask */
-void task_MainTask(void *argument)
+void task_MainTask(void const * argument)
 {
   /* USER CODE BEGIN 5 */
   /* Infinite loop */
@@ -676,7 +667,7 @@ void task_MainTask(void *argument)
 * @retval None
 */
 /* USER CODE END Header_task_BufferHandling */
-void task_BufferHandling(void *argument)
+void task_BufferHandling(void const * argument)
 {
   /* USER CODE BEGIN task_BufferHandling */
   /* Infinite loop */
