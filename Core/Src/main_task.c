@@ -18,6 +18,8 @@ CAN_HandleTypeDef* example_hcan;
 #define HEARTBEAT_MS_BETWEEN 500
 #define TCM_DATA_UPDATE_MS_BETWEEN 10
 
+#define SHIFTDEBUG // Comment out to not compile debug code
+
 // some global variables for examples
 static Main_States_t main_State = ST_IDLE;
 static Pending_Shift_t pending_Shift = NONE;
@@ -162,11 +164,6 @@ static void updateAndQueueParams(void) {
 		update_and_queue_param_u8(&tcmShiftState_state, downshift_State);
 		break;
 	}
-
-//	if(upshift_State != lastUpshiftState) {
-//		printf("=== UPSHIFT STATE CHANGE ===");
-//
-//	}
 }
 
 static float last_swUpshift_state = 0;
@@ -198,6 +195,7 @@ static void check_driver_inputs() {
 		last_swUpshift_state = swDownshift_state.data;
 	}
 
+	// TODO Figure out the best way to join this with the shifting task
 	// Pending shift assignment logic
 	if((main_State != ST_IDLE) && (pending_Shift != 0)) {
 		if(tcm_data.sw_upshift) {

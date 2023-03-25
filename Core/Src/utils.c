@@ -4,7 +4,6 @@
  * 2. Clutch task - make sure all states covered - fast, slow, bites after distance, different when idle, different if in antistall.
  */
 
-
 #include <math.h>
 #include "utils.h"
 #include "shift_parameters.h"
@@ -36,29 +35,7 @@ void update_tcm_data(void)
 }
 
 float get_trans_speed() {
-	return 0; // TODO Figure out how to do this, prob just set up input capture library to update tcm_data.trans_speed.
-}
-
-// reach_target_RPM_spark_cut
-//  if the current RPM is higher than the target RPM, spark cut the engine. All
-//  safeties are performed in spark_cut
-void reach_target_RPM_spark_cut(uint32_t target_rpm)
-{
-	// if the target RPM is too low, do not spark cut
-	if (target_rpm < MIN_SPARK_CUT_RPM)
-	{
-		safe_spark_cut(false);
-	}
-
-	// if the current RPM is higher than the target RPM, spark cut to reach it
-	else if (tcm_data.current_RPM > target_rpm)
-	{
-		safe_spark_cut(true);
-	}
-	else
-	{
-		safe_spark_cut(false);
-	}
+	return 0; // TODO Wait to implement on an input capture branch
 }
 
 // check_buttons_and_set_clutch_sol
@@ -67,8 +44,8 @@ void reach_target_RPM_spark_cut(uint32_t target_rpm)
 void check_buttons_and_set_clutch_sol(solenoid_position_t position)
 {
 	// If close clutch request comes in when driver is holding button do not drop clutch
-	if (position == SOLENOID_OFF && (swFastClutch_state.data
-			                         || swSlowClutch_state.data) )
+	if (position == SOLENOID_OFF && (tcm_data.sw_fast_clutch
+			                         || tcm_data.sw_slow_clutch) )
 	{
 		set_clutch_solenoid(SOLENOID_ON);
 		return;
@@ -95,50 +72,26 @@ void safe_spark_cut(bool state)
 	set_spark_cut(state);
 }
 
-// get_ave_rpm
-//  Returns the the average RPM over a certain amount of time based on
-//  the parameter ms_of_samples. Limited to the size of the RPM array
-float get_ave_rpm() {
-	return 0; // TODO
-}
-
-// current_trans_wheel_ratio
-//  Used for debugging/integration. Returns the current ratio between
-//  wheel speed and trans speed
-float current_trans_wheel_ratio(void)
+// reach_target_RPM_spark_cut
+//  if the current RPM is higher than the target RPM, spark cut the engine. All
+//  safeties are performed in spark_cut
+void reach_target_RPM_spark_cut(uint32_t target_rpm)
 {
-	return 0; // TODO
-}
-
-// current_RPM_trans_ratio
-//  Used for debugging/integration. Returns the current ratio between RPM and
-//  trans speed
-float current_RPM_trans_ratio(void) {
-	float trans_speed = tcm_data.trans_speed;
-	return (fabs(trans_speed) < 1e-6f) ? -1.0f : (get_ECU_RPM()/trans_speed);
-}
-
-// get_current_gear
-// Uses the positions declared in GEAR_POT_DISTANCES_mm which are set in shift_parameters.h
-// and interpolates between them to determine the gear state
-//TODO: TEST THIS BEFORE ATTEMPTING TO RUN - MATH IS PROBABLY WRONG
-gear_t get_current_gear(float gear_pot_pos)
-{
-	// Search algorithm searches for if the gear position is less than a gear position distance
-	// plus the margin (0.1mm), and if it finds it, then checks if the position is right on the gear
-	// or between it and the last one by checking if the position is less than the declared
-	// distance minus the margin (0.1mm)
-	uint8_t gear_position = gear_pot_pos;
-	for(int i = 1; i < NUM_GEARS / 2; i++) {
-		if (gear_position <= GEAR_POT_DISTANCES_mm[i] + GEAR_POS_MARGIN_mm) {
-			if (gear_position <= GEAR_POT_DISTANCES_mm[i] - GEAR_POS_MARGIN_mm) {
-				return (gear_t)(i * 2 + 1);
-			}
-			return (gear_t)(i * 2);
-		}
+	// if the target RPM is too low, do not spark cut
+	if (target_rpm < MIN_SPARK_CUT_RPM)
+	{
+		safe_spark_cut(false);
 	}
-	// not sure how we got here. Return ERROR_GEAR and panic
-	return ERROR_GEAR;
+
+	// if the current RPM is higher than the target RPM, spark cut to reach it
+	else if (tcm_data.current_RPM > target_rpm)
+	{
+		safe_spark_cut(true);
+	}
+	else
+	{
+		safe_spark_cut(false);
+	}
 }
 
 // calc_target_RPM
@@ -167,30 +120,6 @@ U32 calc_target_RPM(gear_t target_gear) {
 		// If we are in ERROR GEAR or shifting into neutral no target RPM
 		return 0;
 	}
-}
-
-// validate_target_RPM
-// check if an inputed RPM is within the acceptable range
-bool validate_target_RPM(uint32_t target_rpm, gear_t target_gear, U8 fast_clutch, U8 slow_clutch)
-{
-	// If we are getting into ERROR_GEAR or NEUTRAL or clutch button pressed valid shift
-	// Example we are rolling at 2mph and driver is holding clutch and wants to shift into
-	// 5th. Should be allowed and if they drop clutch then anti stall kicks in
-	if (	target_gear == ERROR_GEAR 	||
-			target_gear == NEUTRAL 		||
-			fast_clutch ||
-			slow_clutch )
-	{
-		return true;
-	}
-	// If target RPM not valid return false
-	if (target_rpm < MIN_SPARK_CUT_RPM || MAX_RPM < target_rpm)
-	{
-		return false;
-	}
-
-	// everything is good, return true
-	return true;
 }
 
 // calc_validate_upshift
@@ -259,6 +188,30 @@ bool calc_validate_downshift(gear_t current_gear, U8 fast_clutch, U8 slow_clutch
 	}
 }
 
+// validate_target_RPM
+// check if an inputed RPM is within the acceptable range
+bool validate_target_RPM(uint32_t target_rpm, gear_t target_gear, U8 fast_clutch, U8 slow_clutch)
+{
+	// If we are getting into ERROR_GEAR or NEUTRAL or clutch button pressed valid shift
+	// Example we are rolling at 2mph and driver is holding clutch and wants to shift into
+	// 5th. Should be allowed and if they drop clutch then anti stall kicks in
+	if (	target_gear == ERROR_GEAR 	||
+			target_gear == NEUTRAL 		||
+			fast_clutch ||
+			slow_clutch )
+	{
+		return true;
+	}
+	// If target RPM not valid return false
+	if (target_rpm < MIN_SPARK_CUT_RPM || MAX_RPM < target_rpm)
+	{
+		return false;
+	}
+
+	// everything is good, return true
+	return true;
+}
+
 void set_clutch_solenoid(solenoid_position_t position)
 {
 	HAL_GPIO_WritePin(CLUTCH_SOL_GPIO_Port, CLUTCH_SOL_Pin, position);
@@ -284,6 +237,29 @@ void set_spark_cut(bool state)
 	HAL_GPIO_WritePin(SPK_CUT_GPIO_Port, SPK_CUT_Pin, state);
 }
 
+// get_current_gear
+// Uses the positions declared in GEAR_POT_DISTANCES_mm which are set in shift_parameters.h
+// and interpolates between them to determine the gear state
+//TODO: TEST THIS BEFORE ATTEMPTING TO RUN - MATH IS PROBABLY WRONG
+gear_t get_current_gear(float gear_pot_pos)
+{
+	// Search algorithm searches for if the gear position is less than a gear position distance
+	// plus the margin (0.1mm), and if it finds it, then checks if the position is right on the gear
+	// or between it and the last one by checking if the position is less than the declared
+	// distance minus the margin (0.1mm)
+	uint8_t gear_position = gear_pot_pos;
+	for(int i = 1; i < NUM_GEARS / 2; i++) {
+		if (gear_position <= GEAR_POT_DISTANCES_mm[i] + GEAR_POS_MARGIN_mm) {
+			if (gear_position <= GEAR_POT_DISTANCES_mm[i] - GEAR_POS_MARGIN_mm) {
+				return (gear_t)(i * 2 + 1);
+			}
+			return (gear_t)(i * 2);
+		}
+	}
+	// not sure how we got here. Return ERROR_GEAR and panic
+	return ERROR_GEAR;
+}
+
 float get_gear_pot_pos(void)
 {
 	return gearPosition_mm.data;
@@ -306,4 +282,23 @@ float get_ave_wheel_speed() {
 
 U32 get_ECU_RPM() {
 	return engineRPM_rpm.data;
+}
+
+// Functions currently only used for debugging
+
+// current_trans_wheel_ratio
+//  Used for debugging/integration. Returns the current ratio between
+//  wheel speed and trans speed
+float get_current_trans_wheel_ratio(void)
+{
+	float rear_wheel_avg = get_ave_wheel_speed(); // Modified to be avg wheel speeds from before, may not function the same
+	return (fabs(rear_wheel_avg) < 1e-6f) ? -1.0f : (get_trans_speed()/rear_wheel_avg);
+}
+
+// current_RPM_trans_ratio
+//  Used for debugging/integration. Returns the current ratio between RPM and
+//  trans speed
+float get_current_RPM_trans_ratio(void) {
+	float trans_speed = tcm_data.trans_speed;
+	return (fabs(trans_speed) < 1e-6f) ? -1.0f : (get_ECU_RPM()/trans_speed);
 }
