@@ -15,6 +15,13 @@ typedef enum
 
 typedef enum
 {
+	NONE = 0,
+	UPSHIFT,
+	DOWNSHIFT
+} Pending_Shift_t;
+
+typedef enum
+{
 	ST_U_BEGIN_SHIFT = 0,
 	ST_U_LOAD_SHIFT_LVR,
 	ST_U_EXIT_GEAR,

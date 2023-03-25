@@ -19,6 +19,8 @@ CAN_HandleTypeDef* example_hcan;
 
 // some global variables for examples
 static Main_States_t main_State = ST_IDLE;
+static Pending_Shift_t pending_State = NONE;
+
 static Upshift_States_t upshift_State;
 static Downshift_States_t downshift_State;
 U8 last_button_state = 0;
