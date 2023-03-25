@@ -30,22 +30,13 @@ const float GEAR_POT_DISTANCES_mm[] = {
 void update_tcm_data(void)
 {
 	tcm_data.currently_moving = get_ave_wheel_speed() > MOVING_WHEEL_SPEED_MIN_CUTOFF;
-	tcm_data.current_RPM = get_RPM();
+	tcm_data.current_RPM = get_ECU_RPM();
 	tcm_data.trans_speed = get_trans_speed();
 	tcm_data.wheel_speed = get_ave_wheel_speed();
 }
 
 float get_trans_speed() {
 	return 0; // TODO Figure out how to do this, prob just set up input capture library to update tcm_data.trans_speed.
-}
-
-float get_ave_wheel_speed() {
-	float totalSpeed = wheelSpeedFrontLeft_mph.data + wheelSpeedFrontRight_mph.data + wheelSpeedRearRight_mph.data + wheelSpeedRearLeft_mph.data;
-	return totalSpeed / NUM_WHEELS;
-}
-
-U32 get_RPM() {
-	return engineRPM_rpm.data;
 }
 
 // reach_target_RPM_spark_cut
@@ -122,8 +113,9 @@ float current_trans_wheel_ratio(void)
 // current_RPM_trans_ratio
 //  Used for debugging/integration. Returns the current ratio between RPM and
 //  trans speed
-float current_RPM_trans_ratio() {
-	return 0; // TODO
+float current_RPM_trans_ratio(void) {
+	float trans_speed = tcm_data.trans_speed;
+	return (fabs(trans_speed) < 1e-6f) ? -1.0f : (get_ECU_RPM()/trans_speed);
 }
 
 // get_current_gear
@@ -178,9 +170,27 @@ U32 calc_target_RPM(gear_t target_gear) {
 }
 
 // validate_target_RPM
-//  check if an inputed RPM is within the acceptable range
-bool validate_target_RPM() {
-	return false; // TODO
+// check if an inputed RPM is within the acceptable range
+bool validate_target_RPM(uint32_t target_rpm, gear_t target_gear, U8 fast_clutch, U8 slow_clutch)
+{
+	// If we are getting into ERROR_GEAR or NEUTRAL or clutch button pressed valid shift
+	// Example we are rolling at 2mph and driver is holding clutch and wants to shift into
+	// 5th. Should be allowed and if they drop clutch then anti stall kicks in
+	if (	target_gear == ERROR_GEAR 	||
+			target_gear == NEUTRAL 		||
+			fast_clutch ||
+			slow_clutch )
+	{
+		return true;
+	}
+	// If target RPM not valid return false
+	if (target_rpm < MIN_SPARK_CUT_RPM || MAX_RPM < target_rpm)
+	{
+		return false;
+	}
+
+	// everything is good, return true
+	return true;
 }
 
 // calc_validate_upshift
@@ -222,6 +232,33 @@ bool calc_validate_upshift(gear_t current_gear, U8 fast_clutch, U8 slow_clutch) 
 		}
 }
 
+// calc_validate_downshift
+//  will check if an downshift is valid in the current state of the car. Will also
+//  set the target gear and target RPM if the shift is valid
+bool calc_validate_downshift(gear_t current_gear, U8 fast_clutch, U8 slow_clutch)
+{
+	switch (current_gear)
+	{
+	case GEAR_1:
+	case GEAR_2:
+	case GEAR_3:
+	case GEAR_4:
+	case GEAR_5:
+		tcm_data.target_gear = current_gear - 1;
+		tcm_data.target_RPM = calc_target_RPM(tcm_data.target_gear);
+		// for now always allow downshifts, even if the target RPM is too high
+		//return validate_target_RPM();
+		return true;
+
+	case NEUTRAL:
+	case ERROR_GEAR:
+	default:
+		tcm_data.target_gear = ERROR_GEAR;
+		tcm_data.target_RPM = 0;
+		return true;
+	}
+}
+
 void set_clutch_solenoid(solenoid_position_t position)
 {
 	HAL_GPIO_WritePin(CLUTCH_SOL_GPIO_Port, CLUTCH_SOL_Pin, position);
@@ -260,4 +297,13 @@ float get_clutch_pot_pos(void)
 float get_shift_pot_pos(void)
 {
 	return shifterPosition_mm.data;
+}
+
+float get_ave_wheel_speed() {
+	float totalSpeed = wheelSpeedFrontLeft_mph.data + wheelSpeedFrontRight_mph.data + wheelSpeedRearRight_mph.data + wheelSpeedRearLeft_mph.data;
+	return totalSpeed / NUM_WHEELS;
+}
+
+U32 get_ECU_RPM() {
+	return engineRPM_rpm.data;
 }

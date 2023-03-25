@@ -20,15 +20,28 @@ CAN_HandleTypeDef* example_hcan;
 
 // some global variables for examples
 static Main_States_t main_State = ST_IDLE;
-static Pending_Shift_t pending_State = NONE;
+static Pending_Shift_t pending_Shift = NONE;
 
 static Upshift_States_t upshift_State;
 static Downshift_States_t downshift_State;
 U8 last_button_state = 0;
+
+#ifdef SHIFTDEBUG
+#define NUM_PINS 8
+
+// All upper shifting debug statements
 static Upshift_States_t lastUpshiftState;
 static Downshift_States_t lastDownshiftState;
 static U32 lastShiftingChangeTick = 0;
 static U32 lastPinChangeTick = 0;
+
+static void readPinOutputs();
+static void setArtificialInputs();
+
+static U8 GPIOPin[8] = {0};
+static U8 lastGPIOPin[8] = {0};
+
+#endif
 
 // the CAN callback function used in this example
 static void change_led_state(U8 sender, void* UNUSED_LOCAL_PARAM, U8 remote_param, U8 UNUSED1, U8 UNUSED2, U8 UNUSED3);
@@ -39,88 +52,6 @@ static void run_downshift_sm(void);
 static void check_driver_inputs(void);
 static void clutch_task(U8 fastClutch, U8 slowClutch);
 static void shifting_task();
-static void readPinOutputs();
-static void setArtificialInputs();
-
-#define NUM_PINS 8
-
-static U8 GPIOPin[8] = {0};
-static U8 lastGPIOPin[8] = {0};
-
-//static U8 SpkCutPinRead;
-//static U8 SlowClutchPinRead;
-//static U8 ClutchSolPinRead;
-//static U8 DownshiftSolPinRead;
-//static U8 UpshiftSolPinRead;
-//static U8 Aux1CPinRead;
-//static U8 Aux2CPinRead;
-//static U8 Aux1TPinRead;
-
-static void readPinOutputs() {
-//	SpkCutPinRead = HAL_GPIO_ReadPin(SPK_CUT_GPIO_Port, SPK_CUT_Pin, 0);
-//	SlowClutchPinRead = HAL_GPIO_ReadPin(SLOW_CLUTCH_SOL_GPIO_Port, SLOW_CLUTCH_SOL_Pin, 0);
-//	ClutchSolPinRead = HAL_GPIO_ReadPin(CLUTCH_SOL_GPIO_Port, CLUTCH_SOL_Pin, 0);
-//	DownshiftSolPinRead = HAL_GPIO_ReadPin(DOWNSHIFT_SOL_GPIO_Port, DOWNSHIFT_SOL_Pin, 0);
-//	UpshiftSolPinRead = HAL_GPIO_ReadPin(UPSHIFT_SOL_GPIO_Port, UPSHIFT_SOL_Pin, 0);
-//	Aux1CPinRead = HAL_GPIO_ReadPin(AUX1_C_GPIO_Port, AUX1_C_Pin, 0);
-//	Aux2CPinRead = HAL_GPIO_ReadPin(AUX2_C_GPIO_Port, AUX2_C_Pin, 0);
-//	Aux1TPinRead = HAL_GPIO_ReadPin(AUX1_T_GPIO_Port, AUX1_T_Pin, 0);
-
-	GPIOPin[0] = HAL_GPIO_ReadPin(SPK_CUT_GPIO_Port, SPK_CUT_Pin);
-	GPIOPin[1] = HAL_GPIO_ReadPin(SLOW_CLUTCH_SOL_GPIO_Port, SLOW_CLUTCH_SOL_Pin);
-	GPIOPin[2] = HAL_GPIO_ReadPin(CLUTCH_SOL_GPIO_Port, CLUTCH_SOL_Pin);
-	GPIOPin[3] = HAL_GPIO_ReadPin(DOWNSHIFT_SOL_GPIO_Port, DOWNSHIFT_SOL_Pin);
-	GPIOPin[4] = HAL_GPIO_ReadPin(UPSHIFT_SOL_GPIO_Port, UPSHIFT_SOL_Pin);
-	GPIOPin[5] = HAL_GPIO_ReadPin(AUX1_C_GPIO_Port, AUX1_C_Pin);
-	GPIOPin[6] = HAL_GPIO_ReadPin(AUX2_C_GPIO_Port, AUX2_C_Pin);
-	GPIOPin[7] = HAL_GPIO_ReadPin(AUX1_T_GPIO_Port, AUX1_T_Pin);
-
-	for(int i = 0; i < NUM_PINS; i++) {
-		if(GPIOPin[i] != lastGPIOPin[i]) {
-			char pinName[20];
-
-			switch(i) {
-				case 1:
-					strncpy(pinName, "SPK_CUT", 20*sizeof(char));
-					break;
-				case 2:
-					strncpy(pinName, "SLOW_CLUTCH_SOL", 20*sizeof(char));
-					break;
-				case 3:
-					strncpy(pinName, "DOWNSHIFT_SOL", 20*sizeof(char));
-					break;
-				case 4:
-					strncpy(pinName, "UPSHIFT_SOL", 20*sizeof(char));
-					break;
-				case 5:
-					strncpy(pinName, "AUX1_C", 20*sizeof(char));
-					break;
-				case 6:
-					strncpy(pinName, "AUX2_C", 20*sizeof(char));
-					break;
-				case 7:
-					strncpy(pinName, "AUX1_T", 20*sizeof(char));
-					break;
-				default:
-					break;
-			}
-
-			printf("%s Toggled: %u\n", pinName, GPIOPin[i]);
-			printf("Current Tick: %lu\n", HAL_GetTick());
-			printf("Distance From Last Pin Change: %lu\n", HAL_GetTick() - lastPinChangeTick);
-			lastPinChangeTick = HAL_GetTick();
-		}
-		lastGPIOPin[i] = GPIOPin[i];
-	}
-}
-
-static void setArtificialInputs() {
-	gearPosition_mm.data = 1.05;
-	clutchPosition_mm.data = 27.0;
-	shifterPosition_mm.data = 37.05;
-}
-
-
 
 // init
 //  What needs to happen on startup in order to run GopherCAN
@@ -238,7 +169,13 @@ static void updateAndQueueParams(void) {
 //	}
 }
 
+static float last_swUpshift_state = 0;
+static float last_swDownshift_state = 0;
+
 static void check_driver_inputs() {
+	tcm_data.sw_fast_clutch = swFastClutch_state.data;
+	tcm_data.sw_slow_clutch = swSlowClutch_state.data;
+
 	if(swButon0_state.data) {
 		tcm_data.time_shift_only = !tcm_data.time_shift_only;
 	}
@@ -247,10 +184,39 @@ static void check_driver_inputs() {
 		tcm_data.clutchless_downshift = !tcm_data.clutchless_downshift;
 	}
 
-	tcm_data.sw_downshift = swDownshift_state.data;
-	tcm_data.sw_upshift =  swUpshift_state.data;
-	tcm_data.sw_fast_clutch = swFastClutch_state.data;
-	tcm_data.sw_slow_clutch = swSlowClutch_state.data;
+	// Check button was released before trying shifting again - falling edge
+	if (last_swUpshift_state == 1 && swUpshift_state.data == 0) {
+		tcm_data.sw_upshift = 1;
+	} else {
+		last_swUpshift_state = swUpshift_state.data;
+	}
+
+	// Check button was released before trying shifting again - falling edge
+	if (last_swDownshift_state == 1 && swDownshift_state.data == 0) {
+		tcm_data.sw_downshift = 1;
+	} else {
+		last_swUpshift_state = swDownshift_state.data;
+	}
+
+	// Pending shift assignment logic
+	if((main_State != ST_IDLE) && (pending_Shift != 0)) {
+		if(tcm_data.sw_upshift) {
+			pending_Shift = UPSHIFT;
+		}
+
+		if (tcm_data.sw_downshift) {
+			// Check if opposite signal came in at the same time for whatever reason
+			if(tcm_data.sw_upshift) {
+				pending_Shift = NONE;
+			}
+			pending_Shift = DOWNSHIFT;
+		}
+	} else {
+		// Check if pending should be canceled because opposite signal came in.
+		if ((pending_Shift == UPSHIFT && tcm_data.sw_downshift) || (pending_Shift == DOWNSHIFT && tcm_data.sw_upshift)) {
+			pending_Shift = NONE;
+		}
+	}
 
 	// Check if clutch buttons are pressed and then run clutch task, benefit of being able to be skipped over if used for special input sequences
 	if(tcm_data.sw_fast_clutch || tcm_data.sw_slow_clutch) {
@@ -297,6 +263,23 @@ static void shifting_task() {
 
 		// start a downshift if there is one pending. This means that a new
 		// shift can be queued during the last shift
+
+		if(pending_Shift != 0) {
+			if(pending_Shift == UPSHIFT) {
+				if (calc_validate_upshift(tcm_data.current_gear, tcm_data.sw_fast_clutch, tcm_data.sw_slow_clutch))
+				{
+					main_State = ST_HDL_UPSHIFT;
+					upshift_State = ST_U_BEGIN_SHIFT;
+				}
+			} else if (pending_Shift == DOWNSHIFT) {
+				if (calc_validate_downshift(tcm_data.current_gear, tcm_data.sw_fast_clutch, tcm_data.sw_slow_clutch))
+				{
+					main_State = ST_HDL_DOWNSHIFT;
+					downshift_State = ST_D_BEGIN_SHIFT;
+				}
+			}
+		}
+
 		if (swDownshift_state.data)
 		{
 			swDownshift_state.data = 0;
@@ -440,12 +423,14 @@ static void run_upshift_sm(void)
 		// move on to waiting for the "preload" time to end
 		upshift_State = ST_U_LOAD_SHIFT_LVR;
 
+#ifdef SHIFTDEBUG
 		// Debug
 		printf("=== Upshift State: LOAD_SHIFT_LVR\n");
 		printf("How: Completed begin shift steps\n");
 		printf("Current Tick: %lu\n", HAL_GetTick());
 		printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
 		lastShiftingChangeTick = HAL_GetTick();
+#endif
 		break;
 
 	case ST_U_LOAD_SHIFT_LVR:
@@ -465,12 +450,14 @@ static void run_upshift_sm(void)
 			// move on to waiting to exit gear
 			upshift_State = ST_U_EXIT_GEAR;
 
+#ifdef SHIFTDEBUG
 			// Debug
 			printf("=== Upshift State: EXIT_GEAR\n");
 			printf("How: Preload time completed\n");
 			printf("Current Tick: %lu\n", HAL_GetTick());
 			printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
 			lastShiftingChangeTick = HAL_GetTick();
+#endif
 		}
 		break;
 
@@ -511,12 +498,14 @@ static void run_upshift_sm(void)
 				safe_spark_cut(false);
 				upshift_State = ST_U_SPARK_RETURN;
 
+#ifdef SHIFTDEBUG
 				// Debug
 				printf("=== Upshift State: SPARK_RETURN\n");
 				printf("How: Shift lever movement timeout passed\n");
 				printf("Current Tick: %lu\n", HAL_GetTick());
 				printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
 				lastShiftingChangeTick = HAL_GetTick();
+#endif
 			}
 		}
 		else
@@ -525,12 +514,14 @@ static void run_upshift_sm(void)
 				upshift_State = ST_U_ENTER_GEAR;
 				begin_enter_gear_tick = HAL_GetTick();
 
+#ifdef SHIFTDEBUG
 				// Debug
 				printf("=== Time Shit Only Upshift State: ENTER_GEAR\n");
 				printf("How: Exit gear time completed\n");
 				printf("Current Tick: %lu\n", HAL_GetTick());
 				printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
 				lastShiftingChangeTick = HAL_GetTick();
+#endif
 			}
 		}
 		break;
@@ -551,6 +542,7 @@ static void run_upshift_sm(void)
 		if (get_shift_pot_pos() > UPSHIFT_EXIT_POS_MM ||
 				HAL_GetTick() - begin_exit_gear_spark_return_tick > UPSHIFT_EXIT_SPARK_RETURN_MS)
 		{
+#ifdef SHIFTDEBUG
 			// Debug
 			printf("=== Upshift State: ENTER_GEAR\n");
 			if(get_shift_pot_pos() > UPSHIFT_EXIT_POS_MM) {
@@ -561,6 +553,7 @@ static void run_upshift_sm(void)
 			printf("Current Tick: %lu\n", HAL_GetTick());
 			printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
 			lastShiftingChangeTick = HAL_GetTick();
+#endif
 
 			// If spark return successfully releases then continue onto the
 			// next phase of the shift. If it was not successful (timeout) move
@@ -595,12 +588,14 @@ static void run_upshift_sm(void)
 				upshift_State = ST_U_FINISH_SHIFT;
 				finish_shift_start_tick = HAL_GetTick();
 
+#ifdef SHIFTDEBUG
 				// Debug
 				printf("=== Upshift State: FINISH_SHIFT\n");
 				printf("How: Shifter position moved past threshold\n");
 				printf("Current Tick: %lu\n", HAL_GetTick());
 				printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
 				lastShiftingChangeTick = HAL_GetTick();
+#endif
 				break;
 			}
 
@@ -613,12 +608,14 @@ static void run_upshift_sm(void)
 				upshift_State = ST_U_FINISH_SHIFT;
 				finish_shift_start_tick = HAL_GetTick();
 
+#ifdef SHIFTDEBUG
 				// Debug
 				printf("=== Upshift State: FINISH_SHIFT\n");
 				printf("How: Enter Gear timed out\n");
 				printf("Current Tick: %lu\n", HAL_GetTick());
 				printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
 				lastShiftingChangeTick = HAL_GetTick();
+#endif
 			}
 		}
 		else
@@ -628,12 +625,14 @@ static void run_upshift_sm(void)
 				upshift_State = ST_U_FINISH_SHIFT;
 				finish_shift_start_tick = HAL_GetTick();
 
+#ifdef SHIFTDEBUG
 				// Debug
 				printf("=== Timed Shift Only Upshift State: FINISH_SHIFT\n");
 				printf("How: Enter Gear time completed\n");
 				printf("Current Tick: %lu\n", HAL_GetTick());
 				printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
 				lastShiftingChangeTick = HAL_GetTick();
+#endif
 			}
 		}
 		break;
@@ -664,12 +663,14 @@ static void run_upshift_sm(void)
 		set_upshift_solenoid(SOLENOID_OFF);
 		main_State = ST_IDLE;
 
+#ifdef SHIFTDEBUG
 		// Debug
 		printf("=== Main State: IDLE\n");
 		printf("How: Finish Shift functions completed\n");
 		printf("Current Tick: %lu\n", HAL_GetTick());
 		printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
 		lastShiftingChangeTick = HAL_GetTick();
+#endif
 	}
 }
 
@@ -707,12 +708,14 @@ static void run_downshift_sm(void)
 		// move on to loading the shift lever
 		downshift_State = ST_D_LOAD_SHIFT_LVR;
 		
+#ifdef SHIFTDEBUG
 		// Debug
 		printf("=== Downshift State: LOAD_SHIFT_LVR\n");
 		printf("How: Completed begin shift steps\n");
 		printf("Current Tick: %lu\n", HAL_GetTick());
 		printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
 		lastShiftingChangeTick = HAL_GetTick();
+#endif
 		break;
 
 	case ST_D_LOAD_SHIFT_LVR:
@@ -734,12 +737,14 @@ static void run_downshift_sm(void)
 			begin_exit_gear_tick = HAL_GetTick();
 			downshift_State = ST_D_EXIT_GEAR;
 
+#ifdef SHIFTDEBUG
 			// Debug
 			printf("=== Downshift State: EXIT_GEAR\n");
 			printf("How: Preloading time completed\n");
 			printf("Current Tick: %lu\n", HAL_GetTick());
 			printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
 			lastShiftingChangeTick = HAL_GetTick();
+#endif
 		}
 		break;
 
@@ -762,13 +767,14 @@ static void run_downshift_sm(void)
 				downshift_State = ST_D_ENTER_GEAR;
 				begin_enter_gear_tick = HAL_GetTick();
 
-
+#ifdef SHIFTDEBUG
 				// Debug
 				printf("=== Downshift State: ENTER_GEAR\n");
 				printf("Shift Lever below Downshift Exit Threshold\n");
 				printf("Current Tick: %lu\n", HAL_GetTick());
 				printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
 				lastShiftingChangeTick = HAL_GetTick();
+#endif
 				break;
 			}
 
@@ -783,12 +789,14 @@ static void run_downshift_sm(void)
 				// otherwise we're probably going to fail the shift
 				tcm_data.using_clutch = true;
 
+#ifdef SHIFTDEBUG
 				// Debug
 				printf("=== Downshift State: ENTER_GEAR\n");
 				printf("How: Last State Timeout - Use Clutch\n");
 				printf("Current Tick: %lu\n", HAL_GetTick());
 				printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
 				lastShiftingChangeTick = HAL_GetTick();
+#endif
 			}
 		}
 		else
@@ -797,12 +805,14 @@ static void run_downshift_sm(void)
 				downshift_State = ST_D_ENTER_GEAR;
 				begin_enter_gear_tick = HAL_GetTick();
 
+#ifdef SHIFTDEBUG
 				// Debug
 				printf("=== Time Shift Only Downshift State: ENTER_GEAR\n");
 				printf("How: Exit Gear time completed\n");
 				printf("Current Tick: %lu\n", HAL_GetTick());
 				printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
 				lastShiftingChangeTick = HAL_GetTick();
+#endif
 			}
 		}
 		break;
@@ -827,12 +837,14 @@ static void run_downshift_sm(void)
 				downshift_State = ST_D_FINISH_SHIFT;
 				finish_shift_start_tick = HAL_GetTick();
 
+#ifdef SHIFTDEBUG
 				// Debug
 				printf("=== Downshift State: FINISH_SHIFT\n");
 				printf("How: Enter gear shift pot moved far enough\n");
 				printf("Current Tick: %lu\n", HAL_GetTick());
 				printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
 				lastShiftingChangeTick = HAL_GetTick();
+#endif
 				break;
 			}
 
@@ -848,12 +860,14 @@ static void run_downshift_sm(void)
 				downshift_State = ST_D_HOLD_CLUTCH;
 				begin_hold_clutch_tick = HAL_GetTick();
 
+#ifdef SHIFTDEBUG
 				// Debug
 				printf("=== Downshift State: HOLD_CLUTCH\n");
 				printf("How: Waiting for shift pot timed out\n");
 				printf("Current Tick: %lu\n", HAL_GetTick());
 				printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
 				lastShiftingChangeTick = HAL_GetTick();
+#endif
 			}
 		}
 		else
@@ -862,12 +876,14 @@ static void run_downshift_sm(void)
 				downshift_State = ST_D_FINISH_SHIFT;
 				finish_shift_start_tick = HAL_GetTick();
 
+#ifdef SHIFTDEBUG
 				// Debug
 				printf("=== Time Shift Only Downshift State: FINISH_SHIFT\n");
 				printf("How: Enter Gear time completed\n");
 				printf("Current Tick: %lu\n", HAL_GetTick());
 				printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
 				lastShiftingChangeTick = HAL_GetTick();
+#endif
 			}
 		}
 		break;
@@ -887,12 +903,14 @@ static void run_downshift_sm(void)
 			downshift_State = ST_D_FINISH_SHIFT;
 			finish_shift_start_tick = HAL_GetTick();
 
+#ifdef SHIFTDEBUG
 			// Debug
 			printf("=== Downshift State: FINISH_SHIFT\n");
 			printf("How: Hold Clutch time completed\n");
 			printf("Current Tick: %lu\n", HAL_GetTick());
 			printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
 			lastShiftingChangeTick = HAL_GetTick();
+#endif
 		}
 		break;
 
@@ -916,13 +934,90 @@ static void run_downshift_sm(void)
 		set_downshift_solenoid(SOLENOID_OFF);
 		main_State = ST_IDLE;
 
+#ifdef SHIFTDEBUG
 		// Debug
 		printf("=== Main State: Idle\n");
 		printf("How: Finish Shift functions completed\n");
 		printf("Current Tick: %lu\n", HAL_GetTick());
 		printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
 		lastShiftingChangeTick = HAL_GetTick();
+#endif
 	}
 }
+
+#ifdef SHIFTDEBUG
+//static U8 SpkCutPinRead;
+//static U8 SlowClutchPinRead;
+//static U8 ClutchSolPinRead;
+//static U8 DownshiftSolPinRead;
+//static U8 UpshiftSolPinRead;
+//static U8 Aux1CPinRead;
+//static U8 Aux2CPinRead;
+//static U8 Aux1TPinRead;
+
+static void readPinOutputs() {
+//	SpkCutPinRead = HAL_GPIO_ReadPin(SPK_CUT_GPIO_Port, SPK_CUT_Pin, 0);
+//	SlowClutchPinRead = HAL_GPIO_ReadPin(SLOW_CLUTCH_SOL_GPIO_Port, SLOW_CLUTCH_SOL_Pin, 0);
+//	ClutchSolPinRead = HAL_GPIO_ReadPin(CLUTCH_SOL_GPIO_Port, CLUTCH_SOL_Pin, 0);
+//	DownshiftSolPinRead = HAL_GPIO_ReadPin(DOWNSHIFT_SOL_GPIO_Port, DOWNSHIFT_SOL_Pin, 0);
+//	UpshiftSolPinRead = HAL_GPIO_ReadPin(UPSHIFT_SOL_GPIO_Port, UPSHIFT_SOL_Pin, 0);
+//	Aux1CPinRead = HAL_GPIO_ReadPin(AUX1_C_GPIO_Port, AUX1_C_Pin, 0);
+//	Aux2CPinRead = HAL_GPIO_ReadPin(AUX2_C_GPIO_Port, AUX2_C_Pin, 0);
+//	Aux1TPinRead = HAL_GPIO_ReadPin(AUX1_T_GPIO_Port, AUX1_T_Pin, 0);
+
+	GPIOPin[0] = HAL_GPIO_ReadPin(SPK_CUT_GPIO_Port, SPK_CUT_Pin);
+	GPIOPin[1] = HAL_GPIO_ReadPin(SLOW_CLUTCH_SOL_GPIO_Port, SLOW_CLUTCH_SOL_Pin);
+	GPIOPin[2] = HAL_GPIO_ReadPin(CLUTCH_SOL_GPIO_Port, CLUTCH_SOL_Pin);
+	GPIOPin[3] = HAL_GPIO_ReadPin(DOWNSHIFT_SOL_GPIO_Port, DOWNSHIFT_SOL_Pin);
+	GPIOPin[4] = HAL_GPIO_ReadPin(UPSHIFT_SOL_GPIO_Port, UPSHIFT_SOL_Pin);
+	GPIOPin[5] = HAL_GPIO_ReadPin(AUX1_C_GPIO_Port, AUX1_C_Pin);
+	GPIOPin[6] = HAL_GPIO_ReadPin(AUX2_C_GPIO_Port, AUX2_C_Pin);
+	GPIOPin[7] = HAL_GPIO_ReadPin(AUX1_T_GPIO_Port, AUX1_T_Pin);
+
+	for(int i = 0; i < NUM_PINS; i++) {
+		if(GPIOPin[i] != lastGPIOPin[i]) {
+			char pinName[20];
+
+			switch(i) {
+				case 1:
+					strncpy(pinName, "SPK_CUT", 20*sizeof(char));
+					break;
+				case 2:
+					strncpy(pinName, "SLOW_CLUTCH_SOL", 20*sizeof(char));
+					break;
+				case 3:
+					strncpy(pinName, "DOWNSHIFT_SOL", 20*sizeof(char));
+					break;
+				case 4:
+					strncpy(pinName, "UPSHIFT_SOL", 20*sizeof(char));
+					break;
+				case 5:
+					strncpy(pinName, "AUX1_C", 20*sizeof(char));
+					break;
+				case 6:
+					strncpy(pinName, "AUX2_C", 20*sizeof(char));
+					break;
+				case 7:
+					strncpy(pinName, "AUX1_T", 20*sizeof(char));
+					break;
+				default:
+					break;
+			}
+
+			printf("%s Toggled: %u\n", pinName, GPIOPin[i]);
+			printf("Current Tick: %lu\n", HAL_GetTick());
+			printf("Distance From Last Pin Change: %lu\n", HAL_GetTick() - lastPinChangeTick);
+			lastPinChangeTick = HAL_GetTick();
+		}
+		lastGPIOPin[i] = GPIOPin[i];
+	}
+}
+
+static void setArtificialInputs() {
+	gearPosition_mm.data = 1.05;
+	clutchPosition_mm.data = 27.0;
+	shifterPosition_mm.data = 37.05;
+}
+#endif
 
 // end of GopherCAN_example.c
