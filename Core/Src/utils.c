@@ -62,12 +62,14 @@ void safe_spark_cut(bool state)
 {
 	// dont allow spark cut while entering or exiting neutral or if we are already
 	// below the minimum allowable RPM
-	if (tcm_data.target_gear == NEUTRAL || tcm_data.current_gear == NEUTRAL
-			|| tcm_data.current_RPM < MIN_SPARK_CUT_RPM)
-	{
-		set_spark_cut(false);
-		return;
-	}
+
+	// TODO RETURN WHEN CAR DRIVES
+//	if (tcm_data.target_gear == NEUTRAL || tcm_data.current_gear == NEUTRAL
+//			|| tcm_data.current_RPM < MIN_SPARK_CUT_RPM)
+//	{
+//		set_spark_cut(false);
+//		return;
+//	}
 
 	set_spark_cut(state);
 }
@@ -130,7 +132,7 @@ bool calc_validate_upshift(gear_t current_gear, U8 fast_clutch, U8 slow_clutch) 
 	switch (current_gear)
 		{
 		case NEUTRAL:
-			// Clutch must be pressed to go from NEUTRAL -> 1st
+			// Clutch must be pressed to go from NEUTRAL -> 1st // TODO Check if the case
 			if (fast_clutch || slow_clutch)
 			{
 				tcm_data.target_RPM = 0;

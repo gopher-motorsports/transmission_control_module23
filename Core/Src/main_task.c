@@ -32,8 +32,6 @@ U8 last_button_state = 0;
 #define NUM_PINS 8
 
 // All upper shifting debug statements
-static Upshift_States_t lastUpshiftState;
-static Downshift_States_t lastDownshiftState;
 static U32 lastShiftingChangeTick = 0;
 static U32 lastPinChangeTick = 0;
 
@@ -120,6 +118,11 @@ void main_loop()
 	check_driver_inputs();
 	shifting_task();
 
+	// Debug function checkers
+#ifdef SHIFTDEBUG
+	readPinOutputs();
+#endif
+
 	// send the current tick over UART every second
 	if (HAL_GetTick() - lastPrintHB >= PRINTF_HB_MS_BETWEEN)
 	{
@@ -143,8 +146,8 @@ static void updateAndQueueParams(void) {
 	update_and_queue_param_u8(&tcmCurrentlyMoving_state, tcm_data.currently_moving);
 	update_and_queue_param_u8(&tcmAntiStallActive_state, tcm_data.anti_stall);
 	update_and_queue_param_u8(&tcmUsingClutch_state, tcm_data.using_clutch);
-//	update_and_queue_param_u8(&tcmTimeShiftOnly_state, tcm_data.time_shift_only);
-//	update_and_queue_param_u8(&tcmClutchlessDownshift_state, tcm_data.clutchless_downshift);
+	update_and_queue_param_u8(&tcmTimeShiftOnly_state, tcm_data.time_shift_only);
+	update_and_queue_param_u8(&tcmClutchlessDownshift_state, tcm_data.clutchless_downshift);
 
 	switch (main_State)
 	{
@@ -182,37 +185,37 @@ static void check_driver_inputs() {
 	}
 
 	// Check button was released before trying shifting again - falling edge
-	if (last_swUpshift_state == 1 && swUpshift_state.data == 0) {
+	if ((last_swUpshift_state == 1) && (swUpshift_state.data == 0)) {
 		tcm_data.sw_upshift = 1;
-	} else {
-		last_swUpshift_state = swUpshift_state.data;
 	}
+	last_swUpshift_state = swUpshift_state.data;
 
 	// Check button was released before trying shifting again - falling edge
-	if (last_swDownshift_state == 1 && swDownshift_state.data == 0) {
+	if ((last_swDownshift_state == 1) && (swDownshift_state.data == 0)) {
 		tcm_data.sw_downshift = 1;
-	} else {
-		last_swUpshift_state = swDownshift_state.data;
 	}
+	last_swDownshift_state = swDownshift_state.data;
 
 	// TODO Figure out the best way to join this with the shifting task
 	// Pending shift assignment logic
 	if((main_State != ST_IDLE) && (pending_Shift != 0)) {
 		if(tcm_data.sw_upshift) {
-			pending_Shift = UPSHIFT;
+			if (pending_Shift == DOWNSHIFT) {
+				pending_Shift = NONE;
+			} else {
+				pending_Shift = UPSHIFT;
+			}
+			tcm_data.sw_upshift = 0;
 		}
 
 		if (tcm_data.sw_downshift) {
-			// Check if opposite signal came in at the same time for whatever reason
-			if(tcm_data.sw_upshift) {
+			// Check if opposite signal came in at the same time for whatever reason as well as if we just need downshift
+			if(pending_Shift == UPSHIFT) {
 				pending_Shift = NONE;
+			} else {
+				pending_Shift = DOWNSHIFT;
 			}
-			pending_Shift = DOWNSHIFT;
-		}
-	} else {
-		// Check if pending should be canceled because opposite signal came in.
-		if ((pending_Shift == UPSHIFT && tcm_data.sw_downshift) || (pending_Shift == DOWNSHIFT && tcm_data.sw_upshift)) {
-			pending_Shift = NONE;
+			tcm_data.sw_downshift = 0;
 		}
 	}
 
@@ -239,7 +242,7 @@ static void shifting_task() {
 
 		// TODO WARNING this will mean shifting will not work if the shift
 		// pot gets disconnected as the lever will push one way
-		// TODO Re-implement once sensors implemented correctly
+		// TODO RETURN WHEN CAR DRIVES
 //		if (get_shift_pot_pos() > LEVER_NEUTRAL_POS_MM + LEVER_NEUTRAL_TOLERANCE)
 //		{
 //			// shifter pos is too high. Bring it back down
@@ -262,44 +265,24 @@ static void shifting_task() {
 		// start a downshift if there is one pending. This means that a new
 		// shift can be queued during the last shift
 
-		if(pending_Shift != 0) {
-			if(pending_Shift == UPSHIFT) {
-				if (calc_validate_upshift(tcm_data.current_gear, tcm_data.sw_fast_clutch, tcm_data.sw_slow_clutch))
-				{
-					main_State = ST_HDL_UPSHIFT;
-					upshift_State = ST_U_BEGIN_SHIFT;
-				}
-			} else if (pending_Shift == DOWNSHIFT) {
-				if (calc_validate_downshift(tcm_data.current_gear, tcm_data.sw_fast_clutch, tcm_data.sw_slow_clutch))
-				{
-					main_State = ST_HDL_DOWNSHIFT;
-					downshift_State = ST_D_BEGIN_SHIFT;
-				}
-			}
-		}
-
-		if (swDownshift_state.data)
-		{
-			swDownshift_state.data = 0;
-			// TODO: Re-implement
-//			if (calc_validate_downshift(car_shift_data.current_gear, sw_clutch_fast, sw_clutch_slow))
-//			{
-				main_State = ST_HDL_DOWNSHIFT;
-				downshift_State = ST_D_BEGIN_SHIFT;
-//			}
-		}
-
-		// same for upshift. Another shift can be queued
-		if (swUpshift_state.data)
-		{
-			swUpshift_state.data = 0;
-			// TODO: Re-implement
-//			if (calc_validate_upshift(car_shift_data.current_gear, sw_clutch_fast, sw_clutch_slow))
-//			{
+		// There are a bunch of cases where variables that are 0 are set to 0 again, but this is more worth it than to add many more statements.
+		if(tcm_data.sw_upshift || pending_Shift == UPSHIFT) {
+			tcm_data.sw_upshift = 0;
+			if (calc_validate_upshift(tcm_data.current_gear, tcm_data.sw_fast_clutch, tcm_data.sw_slow_clutch))
+			{
 				main_State = ST_HDL_UPSHIFT;
 				upshift_State = ST_U_BEGIN_SHIFT;
-//			}
+			}
+		} else if (tcm_data.sw_downshift || pending_Shift == DOWNSHIFT) {
+			tcm_data.sw_downshift = 0;
+			if (calc_validate_downshift(tcm_data.current_gear, tcm_data.sw_fast_clutch, tcm_data.sw_slow_clutch))
+			{
+				main_State = ST_HDL_DOWNSHIFT;
+				downshift_State = ST_D_BEGIN_SHIFT;
+			}
 		}
+		pending_Shift = NONE;
+
 		break;
 
 	case ST_HDL_UPSHIFT:
@@ -399,8 +382,6 @@ static void run_upshift_sm(void)
 	static uint32_t begin_exit_gear_tick;
 	static uint32_t begin_enter_gear_tick;
 	static uint32_t begin_exit_gear_spark_return_tick;
-	static uint32_t finish_shift_start_tick;
-	static uint32_t spark_cut_start_time;
 
 	// calculate the target RPM at the start of each cycle through the loop
 	tcm_data.target_RPM = calc_target_RPM(tcm_data.target_gear);
@@ -426,7 +407,7 @@ static void run_upshift_sm(void)
 		printf("=== Upshift State: LOAD_SHIFT_LVR\n");
 		printf("How: Completed begin shift steps\n");
 		printf("Current Tick: %lu\n", HAL_GetTick());
-		printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
+		printf("Distance from Last Occurence: %lu //\n", HAL_GetTick() - lastShiftingChangeTick);
 		lastShiftingChangeTick = HAL_GetTick();
 #endif
 		break;
@@ -441,7 +422,6 @@ static void run_upshift_sm(void)
 		{
 			// preload time is over. Start spark cutting to disengage the
 			// gears and moving the RPM to match up with the next gearS
-			spark_cut_start_time = HAL_GetTick(); // Begin timer for making sure we shift for a minimum amount of time
 			begin_exit_gear_tick = HAL_GetTick();
 			safe_spark_cut(true);
 
@@ -453,7 +433,7 @@ static void run_upshift_sm(void)
 			printf("=== Upshift State: EXIT_GEAR\n");
 			printf("How: Preload time completed\n");
 			printf("Current Tick: %lu\n", HAL_GetTick());
-			printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
+			printf("Distance from Last Occurence: %lu //\n", HAL_GetTick() - lastShiftingChangeTick);
 			lastShiftingChangeTick = HAL_GetTick();
 #endif
 		}
@@ -501,7 +481,7 @@ static void run_upshift_sm(void)
 				printf("=== Upshift State: SPARK_RETURN\n");
 				printf("How: Shift lever movement timeout passed\n");
 				printf("Current Tick: %lu\n", HAL_GetTick());
-				printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
+				printf("Distance from Last Occurence: %lu //\n", HAL_GetTick() - lastShiftingChangeTick);
 				lastShiftingChangeTick = HAL_GetTick();
 #endif
 			}
@@ -517,7 +497,7 @@ static void run_upshift_sm(void)
 				printf("=== Time Shit Only Upshift State: ENTER_GEAR\n");
 				printf("How: Exit gear time completed\n");
 				printf("Current Tick: %lu\n", HAL_GetTick());
-				printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
+				printf("Distance from Last Occurence: %lu //\n", HAL_GetTick() - lastShiftingChangeTick);
 				lastShiftingChangeTick = HAL_GetTick();
 #endif
 			}
@@ -549,7 +529,7 @@ static void run_upshift_sm(void)
 				printf("How: Spark return timed out\n");
 			}
 			printf("Current Tick: %lu\n", HAL_GetTick());
-			printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
+			printf("Distance from Last Occurence: %lu //\n", HAL_GetTick() - lastShiftingChangeTick);
 			lastShiftingChangeTick = HAL_GetTick();
 #endif
 
@@ -584,14 +564,13 @@ static void run_upshift_sm(void)
 			{
 				// shift position says we are done shifting
 				upshift_State = ST_U_FINISH_SHIFT;
-				finish_shift_start_tick = HAL_GetTick();
 
 #ifdef SHIFTDEBUG
 				// Debug
 				printf("=== Upshift State: FINISH_SHIFT\n");
 				printf("How: Shifter position moved past threshold\n");
 				printf("Current Tick: %lu\n", HAL_GetTick());
-				printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
+				printf("Distance from Last Occurence: %lu //\n", HAL_GetTick() - lastShiftingChangeTick);
 				lastShiftingChangeTick = HAL_GetTick();
 #endif
 				break;
@@ -604,14 +583,13 @@ static void run_upshift_sm(void)
 				// dont increment the gears and move on
 				tcm_data.successful_shift = false;
 				upshift_State = ST_U_FINISH_SHIFT;
-				finish_shift_start_tick = HAL_GetTick();
 
 #ifdef SHIFTDEBUG
 				// Debug
 				printf("=== Upshift State: FINISH_SHIFT\n");
 				printf("How: Enter Gear timed out\n");
 				printf("Current Tick: %lu\n", HAL_GetTick());
-				printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
+				printf("Distance from Last Occurence: %lu //\n", HAL_GetTick() - lastShiftingChangeTick);
 				lastShiftingChangeTick = HAL_GetTick();
 #endif
 			}
@@ -621,14 +599,13 @@ static void run_upshift_sm(void)
 			if (HAL_GetTick() - begin_enter_gear_tick > UPSHIFT_ENTER_GEAR_TIME_MS)
 			{
 				upshift_State = ST_U_FINISH_SHIFT;
-				finish_shift_start_tick = HAL_GetTick();
 
 #ifdef SHIFTDEBUG
 				// Debug
 				printf("=== Timed Shift Only Upshift State: FINISH_SHIFT\n");
 				printf("How: Enter Gear time completed\n");
 				printf("Current Tick: %lu\n", HAL_GetTick());
-				printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
+				printf("Distance from Last Occurence: %lu //\n", HAL_GetTick() - lastShiftingChangeTick);
 				lastShiftingChangeTick = HAL_GetTick();
 #endif
 			}
@@ -666,7 +643,7 @@ static void run_upshift_sm(void)
 		printf("=== Main State: IDLE\n");
 		printf("How: Finish Shift functions completed\n");
 		printf("Current Tick: %lu\n", HAL_GetTick());
-		printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
+		printf("Distance from Last Occurence: %lu //\n", HAL_GetTick() - lastShiftingChangeTick);
 		lastShiftingChangeTick = HAL_GetTick();
 #endif
 	}
@@ -681,7 +658,6 @@ static void run_downshift_sm(void)
 	static uint32_t begin_exit_gear_tick;
 	static uint32_t begin_enter_gear_tick;
 	static uint32_t begin_hold_clutch_tick;
-	static uint32_t finish_shift_start_tick;
 
 	// calculate the target rpm at the start of each cycle
 	tcm_data.target_RPM = calc_target_RPM(tcm_data.target_gear);
@@ -711,7 +687,7 @@ static void run_downshift_sm(void)
 		printf("=== Downshift State: LOAD_SHIFT_LVR\n");
 		printf("How: Completed begin shift steps\n");
 		printf("Current Tick: %lu\n", HAL_GetTick());
-		printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
+		printf("Distance from Last Occurence: %lu //\n", HAL_GetTick() - lastShiftingChangeTick);
 		lastShiftingChangeTick = HAL_GetTick();
 #endif
 		break;
@@ -740,7 +716,7 @@ static void run_downshift_sm(void)
 			printf("=== Downshift State: EXIT_GEAR\n");
 			printf("How: Preloading time completed\n");
 			printf("Current Tick: %lu\n", HAL_GetTick());
-			printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
+			printf("Distance from Last Occurence: %lu //\n", HAL_GetTick() - lastShiftingChangeTick);
 			lastShiftingChangeTick = HAL_GetTick();
 #endif
 		}
@@ -770,7 +746,7 @@ static void run_downshift_sm(void)
 				printf("=== Downshift State: ENTER_GEAR\n");
 				printf("Shift Lever below Downshift Exit Threshold\n");
 				printf("Current Tick: %lu\n", HAL_GetTick());
-				printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
+				printf("Distance from Last Occurence: %lu //\n", HAL_GetTick() - lastShiftingChangeTick);
 				lastShiftingChangeTick = HAL_GetTick();
 #endif
 				break;
@@ -792,7 +768,7 @@ static void run_downshift_sm(void)
 				printf("=== Downshift State: ENTER_GEAR\n");
 				printf("How: Last State Timeout - Use Clutch\n");
 				printf("Current Tick: %lu\n", HAL_GetTick());
-				printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
+				printf("Distance from Last Occurence: %lu //\n", HAL_GetTick() - lastShiftingChangeTick);
 				lastShiftingChangeTick = HAL_GetTick();
 #endif
 			}
@@ -808,7 +784,7 @@ static void run_downshift_sm(void)
 				printf("=== Time Shift Only Downshift State: ENTER_GEAR\n");
 				printf("How: Exit Gear time completed\n");
 				printf("Current Tick: %lu\n", HAL_GetTick());
-				printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
+				printf("Distance from Last Occurence: %lu //\n", HAL_GetTick() - lastShiftingChangeTick);
 				lastShiftingChangeTick = HAL_GetTick();
 #endif
 			}
@@ -833,14 +809,13 @@ static void run_downshift_sm(void)
 				// any spark cutting and move on to finishing the shift
 				safe_spark_cut(false);
 				downshift_State = ST_D_FINISH_SHIFT;
-				finish_shift_start_tick = HAL_GetTick();
 
 #ifdef SHIFTDEBUG
 				// Debug
 				printf("=== Downshift State: FINISH_SHIFT\n");
 				printf("How: Enter gear shift pot moved far enough\n");
 				printf("Current Tick: %lu\n", HAL_GetTick());
-				printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
+				printf("Distance from Last Occurence: %lu //\n", HAL_GetTick() - lastShiftingChangeTick);
 				lastShiftingChangeTick = HAL_GetTick();
 #endif
 				break;
@@ -863,7 +838,7 @@ static void run_downshift_sm(void)
 				printf("=== Downshift State: HOLD_CLUTCH\n");
 				printf("How: Waiting for shift pot timed out\n");
 				printf("Current Tick: %lu\n", HAL_GetTick());
-				printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
+				printf("Distance from Last Occurence: %lu //\n", HAL_GetTick() - lastShiftingChangeTick);
 				lastShiftingChangeTick = HAL_GetTick();
 #endif
 			}
@@ -872,14 +847,13 @@ static void run_downshift_sm(void)
 		{
 			if (HAL_GetTick() - begin_enter_gear_tick > DOWNSHIFT_ENTER_GEAR_TIME_MS) {
 				downshift_State = ST_D_FINISH_SHIFT;
-				finish_shift_start_tick = HAL_GetTick();
 
 #ifdef SHIFTDEBUG
 				// Debug
 				printf("=== Time Shift Only Downshift State: FINISH_SHIFT\n");
 				printf("How: Enter Gear time completed\n");
 				printf("Current Tick: %lu\n", HAL_GetTick());
-				printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
+				printf("Distance from Last Occurence: %lu //\n", HAL_GetTick() - lastShiftingChangeTick);
 				lastShiftingChangeTick = HAL_GetTick();
 #endif
 			}
@@ -899,14 +873,13 @@ static void run_downshift_sm(void)
 		{
 			// done giving the extra clutch. Move on to finishing the shift
 			downshift_State = ST_D_FINISH_SHIFT;
-			finish_shift_start_tick = HAL_GetTick();
 
 #ifdef SHIFTDEBUG
 			// Debug
 			printf("=== Downshift State: FINISH_SHIFT\n");
 			printf("How: Hold Clutch time completed\n");
 			printf("Current Tick: %lu\n", HAL_GetTick());
-			printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
+			printf("Distance from Last Occurence: %lu //\n", HAL_GetTick() - lastShiftingChangeTick);
 			lastShiftingChangeTick = HAL_GetTick();
 #endif
 		}
@@ -937,7 +910,7 @@ static void run_downshift_sm(void)
 		printf("=== Main State: Idle\n");
 		printf("How: Finish Shift functions completed\n");
 		printf("Current Tick: %lu\n", HAL_GetTick());
-		printf("Distance from Last Occurence: %lu\n", HAL_GetTick() - lastShiftingChangeTick);
+		printf("Distance from Last Occurence: %lu //\n", HAL_GetTick() - lastShiftingChangeTick);
 		lastShiftingChangeTick = HAL_GetTick();
 #endif
 	}
@@ -977,11 +950,14 @@ static void readPinOutputs() {
 			char pinName[20];
 
 			switch(i) {
-				case 1:
+				case 0:
 					strncpy(pinName, "SPK_CUT", 20*sizeof(char));
 					break;
-				case 2:
+				case 1:
 					strncpy(pinName, "SLOW_CLUTCH_SOL", 20*sizeof(char));
+					break;
+				case 2:
+					strncpy(pinName, "CLUTCH_SOL", 20*sizeof(char));
 					break;
 				case 3:
 					strncpy(pinName, "DOWNSHIFT_SOL", 20*sizeof(char));
@@ -1002,9 +978,9 @@ static void readPinOutputs() {
 					break;
 			}
 
-			printf("%s Toggled: %u\n", pinName, GPIOPin[i]);
+			printf("<X> %s Toggled: %u <X>\n", pinName, GPIOPin[i]);
 			printf("Current Tick: %lu\n", HAL_GetTick());
-			printf("Distance From Last Pin Change: %lu\n", HAL_GetTick() - lastPinChangeTick);
+			printf("Distance From Last Pin Change: %lu //\n", HAL_GetTick() - lastPinChangeTick);
 			lastPinChangeTick = HAL_GetTick();
 		}
 		lastGPIOPin[i] = GPIOPin[i];
