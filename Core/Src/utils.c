@@ -242,18 +242,17 @@ void set_spark_cut(bool state)
 // get_current_gear
 // Uses the positions declared in GEAR_POT_DISTANCES_mm which are set in shift_parameters.h
 // and interpolates between them to determine the gear state
-//TODO: TEST THIS BEFORE ATTEMPTING TO RUN - MATH IS PROBABLY WRONG
 gear_t get_current_gear(float gear_pot_pos)
 {
 	// Search algorithm searches for if the gear position is less than a gear position distance
 	// plus the margin (0.1mm), and if it finds it, then checks if the position is right on the gear
 	// or between it and the last one by checking if the position is less than the declared
 	// distance minus the margin (0.1mm)
-	uint8_t gear_position = gear_pot_pos;
-	for(int i = 1; i < NUM_GEARS / 2; i++) {
+	float gear_position = gear_pot_pos;
+	for(int i = 0; i < NUM_GEARS / 2; i++) {
 		if (gear_position <= GEAR_POT_DISTANCES_mm[i] + GEAR_POS_MARGIN_mm) {
 			if (gear_position <= GEAR_POT_DISTANCES_mm[i] - GEAR_POS_MARGIN_mm) {
-				return (gear_t)(i * 2 + 1);
+				return (gear_t)(i * 2 - 1);
 			}
 			return (gear_t)(i * 2);
 		}

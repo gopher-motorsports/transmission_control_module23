@@ -91,6 +91,9 @@ void can_buffer_handling_loop()
 	service_can_tx(example_hcan);
 }
 
+static float gearPotPos;
+static gear_t currentGear;
+static U8 gearNum;
 
 // main_loop
 //  another loop. This includes logic for sending a CAN command. Designed to be
