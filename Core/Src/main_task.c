@@ -59,6 +59,9 @@ void can_buffer_handling_loop()
 	service_can_tx(example_hcan);
 }
 
+static float gearPotPos;
+static gear_t currentGear;
+static U8 gearNum;
 
 // main_loop
 //  another loop. This includes logic for sending a CAN command. Designed to be
@@ -80,21 +83,11 @@ void main_loop()
 		printf("Current tick: %lu\n", HAL_GetTick());
 		last_print_hb = HAL_GetTick();
 	}
-}
 
-float get_gear_pot_pos(void)
-{
-	return gearPosition_mm.data;
-}
-
-float get_clutch_pot_pos(void)
-{
-	return clutchPosition_mm.data;
-}
-
-float get_shift_pot_pos(void)
-{
-	return shifterPosition_mm.data;
+	// Gear read test
+	gearPotPos = get_gear_pot_pos();
+	currentGear = get_current_gear(gearPotPos);
+	gearNum = currentGear;
 }
 
 // can_callback_function example
