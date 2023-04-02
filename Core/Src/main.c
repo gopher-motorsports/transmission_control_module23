@@ -131,6 +131,7 @@ int main(void)
   HAL_GPIO_WritePin(CLUTCH_SOL_GPIO_Port, CLUTCH_SOL_Pin, 1);
   HAL_GPIO_WritePin(DOWNSHIFT_SOL_GPIO_Port, DOWNSHIFT_SOL_Pin, 1);
   HAL_GPIO_WritePin(UPSHIFT_SOL_GPIO_Port, UPSHIFT_SOL_Pin, 1);
+  HAL_GPIO_WritePin(FAULT_LED_GPIO_Port, FAULT_LED_Pin, 1);
   HAL_GPIO_WritePin(AUX1_C_GPIO_Port, AUX1_C_Pin, 1);
   HAL_GPIO_WritePin(AUX2_C_GPIO_Port, AUX2_C_Pin, 1);
   HAL_GPIO_WritePin(AUX1_T_GPIO_Port, AUX1_T_Pin, 1);
