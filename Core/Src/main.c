@@ -51,20 +51,8 @@ TIM_HandleTypeDef htim10;
 
 UART_HandleTypeDef huart1;
 
-/* Definitions for main_task */
-osThreadId_t main_taskHandle;
-const osThreadAttr_t main_task_attributes = {
-  .name = "main_task",
-  .stack_size = 512 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
-/* Definitions for buffer_handling */
-osThreadId_t buffer_handlingHandle;
-const osThreadAttr_t buffer_handling_attributes = {
-  .name = "buffer_handling",
-  .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityAboveNormal,
-};
+osThreadId main_taskHandle;
+osThreadId buffer_handlingHandle;
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -77,8 +65,8 @@ static void MX_CAN1_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM10_Init(void);
 static void MX_USART1_UART_Init(void);
-void task_MainTask(void *argument);
-void task_BufferHandling(void *argument);
+void task_MainTask(void const * argument);
+void task_BufferHandling(void const * argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -137,7 +125,7 @@ int main(void)
   init(&hcan1);
   gsense_init(&hcan1, &hadc1, NULL/*&hadc2*/, NULL, &htim10, GSENSE_LED_GPIO_Port, GSENSE_LED_Pin);
 
-  HAL_GPIO_WritePin(SPK_CUT_GPIO_Port, SPK_CUT_Pin, 1);
+  HAL_GPIO_WritePin(SPK_CUT_GPIO_Port, SPK_CUT_Pin, 0);
   HAL_GPIO_WritePin(CLUTCH_SOL_GPIO_Port, CLUTCH_SOL_Pin, 0);
   HAL_GPIO_WritePin(SLOW_CLUTCH_SOL_GPIO_Port, SLOW_CLUTCH_SOL_Pin, 0);
   HAL_GPIO_WritePin(DOWNSHIFT_SOL_GPIO_Port, DOWNSHIFT_SOL_Pin, 0);
@@ -147,9 +135,6 @@ int main(void)
   HAL_GPIO_WritePin(AUX1_T_GPIO_Port, AUX1_T_Pin, 0);
 
   /* USER CODE END 2 */
-
-  /* Init scheduler */
-  osKernelInitialize();
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
@@ -168,19 +153,17 @@ int main(void)
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* creation of main_task */
-  main_taskHandle = osThreadNew(task_MainTask, NULL, &main_task_attributes);
+  /* definition and creation of main_task */
+  osThreadDef(main_task, task_MainTask, osPriorityNormal, 0, 512);
+  main_taskHandle = osThreadCreate(osThread(main_task), NULL);
 
-  /* creation of buffer_handling */
-  buffer_handlingHandle = osThreadNew(task_BufferHandling, NULL, &buffer_handling_attributes);
+  /* definition and creation of buffer_handling */
+  osThreadDef(buffer_handling, task_BufferHandling, osPriorityAboveNormal, 0, 256);
+  buffer_handlingHandle = osThreadCreate(osThread(buffer_handling), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
-
-  /* USER CODE BEGIN RTOS_EVENTS */
-  /* add events, ... */
-  /* USER CODE END RTOS_EVENTS */
 
   /* Start scheduler */
   osKernelStart();
@@ -505,7 +488,7 @@ static void MX_GPIO_Init(void)
   * @retval None
   */
 /* USER CODE END Header_task_MainTask */
-void task_MainTask(void *argument)
+void task_MainTask(void const * argument)
 {
   /* USER CODE BEGIN 5 */
   /* Infinite loop */
@@ -524,7 +507,7 @@ void task_MainTask(void *argument)
 * @retval None
 */
 /* USER CODE END Header_task_BufferHandling */
-void task_BufferHandling(void *argument)
+void task_BufferHandling(void const * argument)
 {
   /* USER CODE BEGIN task_BufferHandling */
   /* Infinite loop */
