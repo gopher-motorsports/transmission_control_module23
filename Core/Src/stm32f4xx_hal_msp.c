@@ -97,21 +97,15 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* hadc)
     __HAL_RCC_ADC1_CLK_ENABLE();
 
     __HAL_RCC_GPIOC_CLK_ENABLE();
-    __HAL_RCC_GPIOB_CLK_ENABLE();
     /**ADC1 GPIO Configuration
-    PC5     ------> ADC1_IN15
-    PB0     ------> ADC1_IN8
-    PB1     ------> ADC1_IN9
+    PC0     ------> ADC1_IN10
+    PC1     ------> ADC1_IN11
+    PC2     ------> ADC1_IN12
     */
-    GPIO_InitStruct.Pin = GEAR_POS_POT_Pin;
+    GPIO_InitStruct.Pin = GEAR_POS_POT_Pin|SHIFT_POT_Pin|CLUTCH_POT_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(GEAR_POS_POT_GPIO_Port, &GPIO_InitStruct);
-
-    GPIO_InitStruct.Pin = SHIFT_POT_Pin|CLUTCH_POT_Pin;
-    GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
     /* ADC1 DMA Init */
     /* ADC1 Init */
@@ -156,13 +150,11 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* hadc)
     __HAL_RCC_ADC1_CLK_DISABLE();
 
     /**ADC1 GPIO Configuration
-    PC5     ------> ADC1_IN15
-    PB0     ------> ADC1_IN8
-    PB1     ------> ADC1_IN9
+    PC0     ------> ADC1_IN10
+    PC1     ------> ADC1_IN11
+    PC2     ------> ADC1_IN12
     */
-    HAL_GPIO_DeInit(GEAR_POS_POT_GPIO_Port, GEAR_POS_POT_Pin);
-
-    HAL_GPIO_DeInit(GPIOB, SHIFT_POT_Pin|CLUTCH_POT_Pin);
+    HAL_GPIO_DeInit(GPIOC, GEAR_POS_POT_Pin|SHIFT_POT_Pin|CLUTCH_POT_Pin);
 
     /* ADC1 DMA DeInit */
     HAL_DMA_DeInit(hadc->DMA_Handle);
@@ -190,17 +182,17 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* hcan)
     /* Peripheral clock enable */
     __HAL_RCC_CAN1_CLK_ENABLE();
 
-    __HAL_RCC_GPIOB_CLK_ENABLE();
+    __HAL_RCC_GPIOA_CLK_ENABLE();
     /**CAN1 GPIO Configuration
-    PB8     ------> CAN1_RX
-    PB9     ------> CAN1_TX
+    PA11     ------> CAN1_RX
+    PA12     ------> CAN1_TX
     */
-    GPIO_InitStruct.Pin = GPIO_PIN_8|GPIO_PIN_9;
+    GPIO_InitStruct.Pin = GPIO_PIN_11|GPIO_PIN_12;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
     GPIO_InitStruct.Alternate = GPIO_AF9_CAN1;
-    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
     /* CAN1 interrupt Init */
     HAL_NVIC_SetPriority(CAN1_TX_IRQn, 5, 0);
@@ -233,10 +225,10 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* hcan)
     __HAL_RCC_CAN1_CLK_DISABLE();
 
     /**CAN1 GPIO Configuration
-    PB8     ------> CAN1_RX
-    PB9     ------> CAN1_TX
+    PA11     ------> CAN1_RX
+    PA12     ------> CAN1_TX
     */
-    HAL_GPIO_DeInit(GPIOB, GPIO_PIN_8|GPIO_PIN_9);
+    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_11|GPIO_PIN_12);
 
     /* CAN1 interrupt DeInit */
     HAL_NVIC_DisableIRQ(CAN1_TX_IRQn);
@@ -316,17 +308,17 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
     /* Peripheral clock enable */
     __HAL_RCC_USART1_CLK_ENABLE();
 
-    __HAL_RCC_GPIOA_CLK_ENABLE();
+    __HAL_RCC_GPIOB_CLK_ENABLE();
     /**USART1 GPIO Configuration
-    PA9     ------> USART1_TX
-    PA10     ------> USART1_RX
+    PB6     ------> USART1_TX
+    PB7     ------> USART1_RX
     */
-    GPIO_InitStruct.Pin = GPIO_PIN_9|GPIO_PIN_10;
+    GPIO_InitStruct.Pin = GPIO_PIN_6|GPIO_PIN_7;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
     GPIO_InitStruct.Alternate = GPIO_AF7_USART1;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* USER CODE BEGIN USART1_MspInit 1 */
 
@@ -352,10 +344,10 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* huart)
     __HAL_RCC_USART1_CLK_DISABLE();
 
     /**USART1 GPIO Configuration
-    PA9     ------> USART1_TX
-    PA10     ------> USART1_RX
+    PB6     ------> USART1_TX
+    PB7     ------> USART1_RX
     */
-    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_9|GPIO_PIN_10);
+    HAL_GPIO_DeInit(GPIOB, GPIO_PIN_6|GPIO_PIN_7);
 
   /* USER CODE BEGIN USART1_MspDeInit 1 */
 
