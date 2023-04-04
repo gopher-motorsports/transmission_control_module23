@@ -17,6 +17,7 @@ CAN_HandleTypeDef* example_hcan;
 
 // some global variables for examples
 U8 last_button_state = 0;
+U8 error_byte = 0;
 
 // the CAN callback function used in this example
 static void change_led_state(U8 sender, void* UNUSED_LOCAL_PARAM, U8 remote_param, U8 UNUSED1, U8 UNUSED2, U8 UNUSED3);
@@ -76,6 +77,7 @@ void main_loop()
 		HAL_GPIO_TogglePin(HBEAT_GPIO_Port, HBEAT_Pin);
 	}
 
+	checkForErrors();
 	updateAndQueueParams();
 
 	// send the current tick over UART every second
@@ -83,6 +85,16 @@ void main_loop()
 	{
 		printf("Current tick: %lu\n", HAL_GetTick());
 		last_print_hb = HAL_GetTick();
+	}
+}
+
+static void checkForErrors(void) {
+	if (!HAL_GPIO_ReadPin(SWITCH_FAULT_3V3_GPIO_Port, SWITCH_FAULT_3V3_Pin)) {
+		error(SENSE_OUT_OVERCURRENT_3V3, error_byte);
+	}
+
+	if (!HAL_GPIO_ReadPin(SWITCH_FAULT_5V_GPIO_Port, SWITCH_FAULT_5V_Pin)) {
+		error(SENSE_OUT_OVERCURRENT_5V, error_byte);
 	}
 }
 
