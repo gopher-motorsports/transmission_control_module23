@@ -3,6 +3,8 @@
 
 #include "GopherCAN_devboard_example.h"
 #include "main.h"
+#include "gopher_sense.h"
+#include "pulse_sensor.h"
 #include <stdio.h>
 
 // the HAL_CAN struct. This example only works for a single CAN bus
@@ -10,16 +12,13 @@ CAN_HandleTypeDef* example_hcan;
 
 
 // Use this to define what module this board will be
-#define THIS_MODULE_ID PDM_ID
+#define THIS_MODULE_ID TCM_ID
 #define PRINTF_HB_MS_BETWEEN 1000
 #define HEARTBEAT_MS_BETWEEN 500
 
 
 // some global variables for examples
 U8 last_button_state = 0;
-static float ADCReadValue1 = 0;
-static float ADCReadValue2 = 0;
-static float ADCReadValue3 = 0;
 
 // the CAN callback function used in this example
 static void change_led_state(U8 sender, void* UNUSED_LOCAL_PARAM, U8 remote_param, U8 UNUSED1, U8 UNUSED2, U8 UNUSED3);
@@ -92,11 +91,14 @@ void main_loop()
 //
 //	}
 
-	if (HAL_GetTick() - last_test_tick2 > 10)
+	if (HAL_GetTick() - last_test_tick2 > 1)
 	{
-		ADCReadValue3 = get_gear_pot_pos();
-		ADCReadValue1 = get_shift_pot_pos();
-		ADCReadValue2 = get_clutch_pot_pos();
+		//test8888();
+		check_all_dmas();
+//		ADCReadValue3 = get_gear_pot_pos();
+//		ADCReadValue1 = get_shift_pot_pos();
+//		ADCReadValue2 = get_clutch_pot_pos();
+		last_test_tick2 = HAL_GetTick();
 	}
 
 	// send the current tick over UART every second
@@ -109,17 +111,17 @@ void main_loop()
 
 float get_gear_pot_pos(void)
 {
-	return dam_chan_1.data;
+	return gearPosition_mm.data;
 }
 
 float get_clutch_pot_pos(void)
 {
-	return dam_chan_2.data;
+	return clutchPosition_mm.data;
 }
 
 float get_shift_pot_pos(void)
 {
-	return dam_chan_3.data;
+	return shifterPosition_mm.data;
 }
 
 
