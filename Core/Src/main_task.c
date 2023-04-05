@@ -1,21 +1,20 @@
 // GopherCAN_devboard_example.c
 //  This is a bare-bones module file that can be used in order to make a module main file
 
-#include "GopherCAN_devboard_example.h"
+#include "main_task.h"
 #include "main.h"
 #include "gopher_sense.h"
 #include "pulse_sensor.h"
+#include "utils.h"
 #include <stdio.h>
 
 // the HAL_CAN struct. This example only works for a single CAN bus
 CAN_HandleTypeDef* example_hcan;
 
-
 // Use this to define what module this board will be
 #define THIS_MODULE_ID TCM_ID
 #define PRINTF_HB_MS_BETWEEN 1000
 #define HEARTBEAT_MS_BETWEEN 500
-
 
 // some global variables for examples
 U8 last_button_state = 0;
@@ -69,8 +68,6 @@ void can_buffer_handling_loop()
 void main_loop()
 {
 	static uint32_t last_heartbeat = 0;
-	// static uint32_t last_test_tick = 0;
-	static uint32_t last_test_tick2 = 0;
 	static U32 last_print_hb = 0;
 
 	if (HAL_GetTick() - last_heartbeat > HEARTBEAT_MS_BETWEEN)
@@ -79,27 +76,7 @@ void main_loop()
 		HAL_GPIO_TogglePin(HBEAT_GPIO_Port, HBEAT_Pin);
 	}
 
-	// Periodic output testing
-//	if (HAL_GetTick() - last_test_tick > 1000)
-//	{
-//		last_test_tick = HAL_GetTick();
-//		HAL_GPIO_TogglePin(UPSHIFT_SOL_GPIO_Port, UPSHIFT_SOL_Pin);
-//		HAL_GPIO_TogglePin(ECU_SPK_CUT_GPIO_Port, ECU_SPK_CUT_Pin);
-//		HAL_GPIO_TogglePin(AUX_1C_GPIO_Port, AUX_1C_Pin);
-//		HAL_GPIO_TogglePin(AUX_2C_GPIO_Port, AUX_2C_Pin);
-//		HAL_GPIO_TogglePin(AUX_1T_GPIO_Port, AUX_1T_Pin);
-//
-//	}
-
-	if (HAL_GetTick() - last_test_tick2 > 1)
-	{
-		//test8888();
-		check_all_dmas();
-//		ADCReadValue3 = get_gear_pot_pos();
-//		ADCReadValue1 = get_shift_pot_pos();
-//		ADCReadValue2 = get_clutch_pot_pos();
-		last_test_tick2 = HAL_GetTick();
-	}
+	check_all_dmas();
 
 	// send the current tick over UART every second
 	if (HAL_GetTick() - last_print_hb >= PRINTF_HB_MS_BETWEEN)
@@ -123,9 +100,6 @@ float get_shift_pot_pos(void)
 {
 	return shifterPosition_mm.data;
 }
-
-
-
 
 // can_callback_function example
 
