@@ -35,7 +35,8 @@ typedef struct tcm_data_struct
 
 typedef enum
 {
-	SENSE_OUT_OVERCURRENT_3V3 = 0,
+	zero,
+	SENSE_OUT_OVERCURRENT_3V3,
 	SENSE_OUT_OVERCURRENT_5V,
 	SHIFT_POSITION_TIMEOUT,
 	CLUTCH_POSITION_TIMEOUT
@@ -50,7 +51,7 @@ typedef enum
 
 extern tcm_data_struct_t tcm_data;
 
-void error(tcm_errors_t tcm_error, int error_store_location);
+void error(tcm_errors_t tcm_error, U8* error_store_location);
 void set_clutch_solenoid(solenoid_position_t position);
 void set_slow_drop(bool state);
 void set_upshift_solenoid(solenoid_position_t position);

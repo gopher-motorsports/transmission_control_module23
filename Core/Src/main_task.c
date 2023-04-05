@@ -23,6 +23,7 @@ U8 error_byte = 0;
 static void change_led_state(U8 sender, void* UNUSED_LOCAL_PARAM, U8 remote_param, U8 UNUSED1, U8 UNUSED2, U8 UNUSED3);
 static void init_error(void);
 static void updateAndQueueParams(void);
+static void checkForErrors(void);
 
 // init
 //  What needs to happen on startup in order to run GopherCAN
@@ -90,11 +91,11 @@ void main_loop()
 
 static void checkForErrors(void) {
 	if (!HAL_GPIO_ReadPin(SWITCH_FAULT_3V3_GPIO_Port, SWITCH_FAULT_3V3_Pin)) {
-		error(SENSE_OUT_OVERCURRENT_3V3, error_byte);
+		error(SENSE_OUT_OVERCURRENT_3V3, &error_byte);
 	}
 
 	if (!HAL_GPIO_ReadPin(SWITCH_FAULT_5V_GPIO_Port, SWITCH_FAULT_5V_Pin)) {
-		error(SENSE_OUT_OVERCURRENT_5V, error_byte);
+		error(SENSE_OUT_OVERCURRENT_5V, &error_byte);
 	}
 }
 
@@ -106,6 +107,7 @@ static void updateAndQueueParams(void) {
 	update_and_queue_param_u8(&tcmCurrentlyMoving_state, tcm_data.currently_moving);
 	update_and_queue_param_u8(&tcmAntiStallActive_state, tcm_data.anti_stall);
 	update_and_queue_param_u8(&tcmUsingClutch_state, tcm_data.using_clutch);
+	update_and_queue_param_u8(&tcmError_state, error_byte);
 
 	// TODO logic for sending the current state of the shifts
 //	switch (car_Main_State)

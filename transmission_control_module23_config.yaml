@@ -44,7 +44,7 @@ buckets:
                 ADC: NON_ADC
                 sensor: NON_ADC
                 samples_buffered: 1
-
+    very_low_frequency_tcm:
         frequency_hz: 10
         parameters:
             tcmError_state:

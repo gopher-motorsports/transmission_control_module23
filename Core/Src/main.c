@@ -23,6 +23,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "gopher_sense.h"
+#include "main_task.h"
 
 /* USER CODE END Includes */
 
