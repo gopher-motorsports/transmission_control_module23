@@ -6,6 +6,7 @@
 #include "gopher_sense.h"
 #include "pulse_sensor.h"
 #include "utils.h"
+#include "gopher_sense.h"
 #include <stdio.h>
 
 // the HAL_CAN struct. This example only works for a single CAN bus
@@ -22,6 +23,7 @@ U8 last_button_state = 0;
 // the CAN callback function used in this example
 static void change_led_state(U8 sender, void* UNUSED_LOCAL_PARAM, U8 remote_param, U8 UNUSED1, U8 UNUSED2, U8 UNUSED3);
 static void init_error(void);
+static void updateAndQueueParams(void);
 
 // init
 //  What needs to happen on startup in order to run GopherCAN
@@ -77,6 +79,7 @@ void main_loop()
 	}
 
 	check_all_dmas();
+	updateAndQueueParams();
 
 	// send the current tick over UART every second
 	if (HAL_GetTick() - last_print_hb >= PRINTF_HB_MS_BETWEEN)
@@ -84,6 +87,36 @@ void main_loop()
 		printf("Current tick: %lu\n", HAL_GetTick());
 		last_print_hb = HAL_GetTick();
 	}
+}
+
+// Updates gcan variables
+static void updateAndQueueParams(void) {
+	update_and_queue_param_float(&counterShaftSpeed_rpm, tcm_data.trans_speed);
+	update_and_queue_param_u16(&tcmTargetRPM_rpm, tcm_data.target_RPM); // Sends it to be logged
+	update_and_queue_param_u8(&tcmCurrentGear_state, tcm_data.current_gear);
+	update_and_queue_param_u8(&tcmCurrentlyMoving_state, tcm_data.currently_moving);
+	update_and_queue_param_u8(&tcmAntiStallActive_state, tcm_data.anti_stall);
+	update_and_queue_param_u8(&tcmUsingClutch_state, tcm_data.using_clutch);
+
+	// TODO logic for sending the current state of the shifts
+//	switch (car_Main_State)
+//	{
+//	default:
+//	case ST_IDLE:
+//		// not shifting, send 0
+//		update_and_queue_param_u8(&tcmShiftState_state, 0);
+//		break;
+//
+//	case ST_HDL_UPSHIFT:
+//		// send the upshift state
+//		update_and_queue_param_u8(&tcmShiftState_state, car_Upshift_State);
+//		break;
+//
+//	case ST_HDL_DOWNSHIFT:
+//		// send the downshift state
+//		update_and_queue_param_u8(&tcmShiftState_state, car_Downshift_State);
+//		break;
+//	}
 }
 
 float get_gear_pot_pos(void)
