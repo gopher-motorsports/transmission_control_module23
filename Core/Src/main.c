@@ -51,20 +51,8 @@ TIM_HandleTypeDef htim10;
 
 UART_HandleTypeDef huart1;
 
-/* Definitions for main_task */
-osThreadId_t main_taskHandle;
-const osThreadAttr_t main_task_attributes = {
-  .name = "main_task",
-  .stack_size = 512 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
-/* Definitions for buffer_handling */
-osThreadId_t buffer_handlingHandle;
-const osThreadAttr_t buffer_handling_attributes = {
-  .name = "buffer_handling",
-  .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityAboveNormal,
-};
+osThreadId main_taskHandle;
+osThreadId buffer_handlingHandle;
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -77,8 +65,8 @@ static void MX_CAN1_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM10_Init(void);
 static void MX_USART1_UART_Init(void);
-void task_MainTask(void *argument);
-void task_BufferHandling(void *argument);
+void task_MainTask(void const * argument);
+void task_BufferHandling(void const * argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -137,10 +125,9 @@ int main(void)
   init(&hcan1);
   gsense_init(&hcan1, &hadc1, NULL/*&hadc2*/, NULL, &htim10, GSENSE_LED_GPIO_Port, GSENSE_LED_Pin);
 
-  // Set initial output states so nothing is floating
-  HAL_GPIO_WritePin(SPK_CUT_GPIO_Port, SPK_CUT_Pin, 0);
-  HAL_GPIO_WritePin(SLOW_CLUTCH_SOL_GPIO_Port, SLOW_CLUTCH_SOL_Pin, 0);
+  HAL_GPIO_WritePin(SPK_CUT_GPIO_Port, SPK_CUT_Pin, 1);
   HAL_GPIO_WritePin(CLUTCH_SOL_GPIO_Port, CLUTCH_SOL_Pin, 0);
+  HAL_GPIO_WritePin(SLOW_CLUTCH_SOL_GPIO_Port, SLOW_CLUTCH_SOL_Pin, 0);
   HAL_GPIO_WritePin(DOWNSHIFT_SOL_GPIO_Port, DOWNSHIFT_SOL_Pin, 0);
   HAL_GPIO_WritePin(UPSHIFT_SOL_GPIO_Port, UPSHIFT_SOL_Pin, 0);
   HAL_GPIO_WritePin(AUX1_C_GPIO_Port, AUX1_C_Pin, 0);
@@ -148,9 +135,6 @@ int main(void)
   HAL_GPIO_WritePin(AUX1_T_GPIO_Port, AUX1_T_Pin, 0);
 
   /* USER CODE END 2 */
-
-  /* Init scheduler */
-  osKernelInitialize();
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
@@ -169,19 +153,17 @@ int main(void)
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* creation of main_task */
-  main_taskHandle = osThreadNew(task_MainTask, NULL, &main_task_attributes);
+  /* definition and creation of main_task */
+  osThreadDef(main_task, task_MainTask, osPriorityNormal, 0, 512);
+  main_taskHandle = osThreadCreate(osThread(main_task), NULL);
 
-  /* creation of buffer_handling */
-  buffer_handlingHandle = osThreadNew(task_BufferHandling, NULL, &buffer_handling_attributes);
+  /* definition and creation of buffer_handling */
+  osThreadDef(buffer_handling, task_BufferHandling, osPriorityAboveNormal, 0, 256);
+  buffer_handlingHandle = osThreadCreate(osThread(buffer_handling), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
-
-  /* USER CODE BEGIN RTOS_EVENTS */
-  /* add events, ... */
-  /* USER CODE END RTOS_EVENTS */
 
   /* Start scheduler */
   osKernelStart();
@@ -269,13 +251,13 @@ static void MX_ADC1_Init(void)
   hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
   hadc1.Init.Resolution = ADC_RESOLUTION_12B;
   hadc1.Init.ScanConvMode = ENABLE;
-  hadc1.Init.ContinuousConvMode = ENABLE;
+  hadc1.Init.ContinuousConvMode = DISABLE;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
   hadc1.Init.NbrOfConversion = 3;
-  hadc1.Init.DMAContinuousRequests = ENABLE;
+  hadc1.Init.DMAContinuousRequests = DISABLE;
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
   {
@@ -284,9 +266,9 @@ static void MX_ADC1_Init(void)
 
   /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
   */
-  sConfig.Channel = ADC_CHANNEL_8;
+  sConfig.Channel = ADC_CHANNEL_10;
   sConfig.Rank = 1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  sConfig.SamplingTime = ADC_SAMPLETIME_15CYCLES;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -294,7 +276,7 @@ static void MX_ADC1_Init(void)
 
   /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
   */
-  sConfig.Channel = ADC_CHANNEL_9;
+  sConfig.Channel = ADC_CHANNEL_11;
   sConfig.Rank = 2;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
@@ -303,7 +285,7 @@ static void MX_ADC1_Init(void)
 
   /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
   */
-  sConfig.Channel = ADC_CHANNEL_15;
+  sConfig.Channel = ADC_CHANNEL_12;
   sConfig.Rank = 3;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
@@ -332,7 +314,7 @@ static void MX_CAN1_Init(void)
   /* USER CODE END CAN1_Init 1 */
   hcan1.Instance = CAN1;
   hcan1.Init.Prescaler = 5;
-  hcan1.Init.Mode = CAN_MODE_LOOPBACK;
+  hcan1.Init.Mode = CAN_MODE_NORMAL;
   hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;
   hcan1.Init.TimeSeg1 = CAN_BS1_6TQ;
   hcan1.Init.TimeSeg2 = CAN_BS2_1TQ;
@@ -442,46 +424,52 @@ static void MX_GPIO_Init(void)
   GPIO_InitTypeDef GPIO_InitStruct = {0};
 
   /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GSENSE_LED_Pin|HBEAT_Pin|AUX2_C_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, AUX1_T_Pin|GSENSE_LED_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, AUX1_T_Pin|UPSHIFT_SOL_Pin|DOWNSHIFT_SOL_Pin|CLUTCH_SOL_Pin
-                          |SLOW_CLUTCH_SOL_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, DOWNSHIFT_SOL_Pin|CLUTCH_SOL_Pin|SLOW_CLUTCH_SOL_Pin|UPSHIFT_SOL_Pin
+                          |SPK_CUT_Pin|AUX1_C_Pin|HBEAT_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, AUX1_C_Pin|SPK_CUT_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, AUX2_C_Pin|FAULT_LED_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : GSENSE_LED_Pin HBEAT_Pin AUX2_C_Pin */
-  GPIO_InitStruct.Pin = GSENSE_LED_Pin|HBEAT_Pin|AUX2_C_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  /*Configure GPIO pins : SWITCH_FAULT_3V3_Pin SWITCH_FAULT_5V_Pin */
+  GPIO_InitStruct.Pin = SWITCH_FAULT_3V3_Pin|SWITCH_FAULT_5V_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : AUX1_T_Pin UPSHIFT_SOL_Pin DOWNSHIFT_SOL_Pin CLUTCH_SOL_Pin
-                           SLOW_CLUTCH_SOL_Pin */
-  GPIO_InitStruct.Pin = AUX1_T_Pin|UPSHIFT_SOL_Pin|DOWNSHIFT_SOL_Pin|CLUTCH_SOL_Pin
-                          |SLOW_CLUTCH_SOL_Pin;
+  /*Configure GPIO pins : AUX1_T_Pin GSENSE_LED_Pin */
+  GPIO_InitStruct.Pin = AUX1_T_Pin|GSENSE_LED_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PB4 */
-  GPIO_InitStruct.Pin = GPIO_PIN_4;
+  /*Configure GPIO pins : DOWNSHIFT_SOL_Pin CLUTCH_SOL_Pin SLOW_CLUTCH_SOL_Pin UPSHIFT_SOL_Pin
+                           SPK_CUT_Pin AUX1_C_Pin HBEAT_Pin */
+  GPIO_InitStruct.Pin = DOWNSHIFT_SOL_Pin|CLUTCH_SOL_Pin|SLOW_CLUTCH_SOL_Pin|UPSHIFT_SOL_Pin
+                          |SPK_CUT_Pin|AUX1_C_Pin|HBEAT_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : TRANS_SPEED_Pin */
+  GPIO_InitStruct.Pin = TRANS_SPEED_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.Alternate = GPIO_AF2_TIM3;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  GPIO_InitStruct.Alternate = GPIO_AF1_TIM2;
+  HAL_GPIO_Init(TRANS_SPEED_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : AUX1_C_Pin SPK_CUT_Pin */
-  GPIO_InitStruct.Pin = AUX1_C_Pin|SPK_CUT_Pin;
+  /*Configure GPIO pins : AUX2_C_Pin FAULT_LED_Pin */
+  GPIO_InitStruct.Pin = AUX2_C_Pin|FAULT_LED_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -500,7 +488,7 @@ static void MX_GPIO_Init(void)
   * @retval None
   */
 /* USER CODE END Header_task_MainTask */
-void task_MainTask(void *argument)
+void task_MainTask(void const * argument)
 {
   /* USER CODE BEGIN 5 */
   /* Infinite loop */
@@ -519,7 +507,7 @@ void task_MainTask(void *argument)
 * @retval None
 */
 /* USER CODE END Header_task_BufferHandling */
-void task_BufferHandling(void *argument)
+void task_BufferHandling(void const * argument)
 {
   /* USER CODE BEGIN task_BufferHandling */
   /* Infinite loop */

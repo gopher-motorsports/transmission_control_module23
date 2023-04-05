@@ -70,7 +70,7 @@ void can_buffer_handling_loop()
 void main_loop()
 {
 	static uint32_t last_heartbeat = 0;
-	static uint32_t last_test_tick = 0;
+	// static uint32_t last_test_tick = 0;
 	static uint32_t last_test_tick2 = 0;
 	static U32 last_print_hb = 0;
 
@@ -80,15 +80,15 @@ void main_loop()
 		HAL_GPIO_TogglePin(HBEAT_GPIO_Port, HBEAT_Pin);
 	}
 
-	// Periodic pin output testing code
+	// Periodic output testing
 //	if (HAL_GetTick() - last_test_tick > 1000)
 //	{
 //		last_test_tick = HAL_GetTick();
 //		HAL_GPIO_TogglePin(UPSHIFT_SOL_GPIO_Port, UPSHIFT_SOL_Pin);
-//		HAL_GPIO_TogglePin(SPK_CUT_GPIO_Port, SPK_CUT_Pin);
-//		HAL_GPIO_TogglePin(AUX1_C_GPIO_Port, AUX1_C_Pin);
-//		HAL_GPIO_TogglePin(AUX2_C_GPIO_Port, AUX2_C_Pin);
-//		HAL_GPIO_TogglePin(AUX1_T_GPIO_Port, AUX1_T_Pin);
+//		HAL_GPIO_TogglePin(ECU_SPK_CUT_GPIO_Port, ECU_SPK_CUT_Pin);
+//		HAL_GPIO_TogglePin(AUX_1C_GPIO_Port, AUX_1C_Pin);
+//		HAL_GPIO_TogglePin(AUX_2C_GPIO_Port, AUX_2C_Pin);
+//		HAL_GPIO_TogglePin(AUX_1T_GPIO_Port, AUX_1T_Pin);
 //
 //	}
 
@@ -134,7 +134,7 @@ float get_shift_pot_pos(void)
 //  correctly
 static void change_led_state(U8 sender, void* parameter, U8 remote_param, U8 UNUSED1, U8 UNUSED2, U8 UNUSED3)
 {
-	//HAL_GPIO_WritePin(GRN_LED_GPIO_Port, GRN_LED_Pin, !!remote_param);
+	//HAL_GPIO_WritePin(FAULT_LED_GPIO_Port, FAULT_LED_Pin, !!remote_param);
 	return;
 }
 
