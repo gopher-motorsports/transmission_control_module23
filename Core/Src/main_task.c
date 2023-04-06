@@ -6,6 +6,7 @@
 #include "utils.h"
 #include "gopher_sense.h"
 #include <stdio.h>
+#include <stdbool.h>
 
 // the HAL_CAN struct. This example only works for a single CAN bus
 CAN_HandleTypeDef* example_hcan;
@@ -14,6 +15,7 @@ CAN_HandleTypeDef* example_hcan;
 #define THIS_MODULE_ID TCM_ID
 #define PRINTF_HB_MS_BETWEEN 1000
 #define HEARTBEAT_MS_BETWEEN 500
+#define OVERCURRENT_FAULT_LED_TIME_MS 10000
 
 // some global variables for examples
 U8 last_button_state = 0;
@@ -90,12 +92,38 @@ void main_loop()
 }
 
 static void checkForErrors(void) {
+	// TODO: Scale this to include different modes and things for error states
+
+	static U32 led_on_start_time = 0;
+	static U32 time_on_ms = 0;
+	static bool led_on = false;
 	if (!HAL_GPIO_ReadPin(SWITCH_FAULT_3V3_GPIO_Port, SWITCH_FAULT_3V3_Pin)) {
 		error(SENSE_OUT_OVERCURRENT_3V3, &error_byte);
+		led_on = true;
+		led_on_start_time = HAL_GetTick();
+		// See if this is currently the highest priority
+		if (error_byte > 1) {
+			time_on_ms = OVERCURRENT_FAULT_LED_TIME_MS;
+		}
 	}
 
 	if (!HAL_GPIO_ReadPin(SWITCH_FAULT_5V_GPIO_Port, SWITCH_FAULT_5V_Pin)) {
 		error(SENSE_OUT_OVERCURRENT_5V, &error_byte);
+		led_on = true;
+		led_on_start_time = HAL_GetTick();
+		// See if this is currently the highest priority
+		if (error_byte > 2) {
+			time_on_ms = OVERCURRENT_FAULT_LED_TIME_MS;
+		}
+	}
+
+	if(led_on) {
+		if (HAL_GetTick() - last_print_hb >= time_on_ms) {
+			HAL_GPIO_WritePin(FAULT_LED_GPIO_Port, FAULT_LED_Pin, 0);
+			led_on = false;
+		} else {
+			HAL_GPIO_WritePin(FAULT_LED_GPIO_Port, FAULT_LED_Pin, 1);
+		}
 	}
 }
 
