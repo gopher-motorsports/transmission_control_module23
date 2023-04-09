@@ -97,7 +97,7 @@ void main_loop()
 	if (HAL_GetTick() - last_test_tick2 > 1)
 	{
 		//test8888();
-		check_all_dmas();
+		check_pulse_sensors();
 //		ADCReadValue3 = get_gear_pot_pos();
 //		ADCReadValue1 = get_shift_pot_pos();
 //		ADCReadValue2 = get_clutch_pot_pos();
