@@ -47,6 +47,9 @@ void init(CAN_HandleTypeDef* hcan_ptr)
 	{
 		init_error();
 	}
+
+	// Clear the error byte, so it has to keep being triggered if the error is persistent (and doesn't require a function to turn it off again)
+	error_byte = 0;
 }
 
 
@@ -101,8 +104,8 @@ static void checkForErrors(void) {
 		error(SENSE_OUT_OVERCURRENT_3V3, &error_byte);
 		led_on = true;
 		led_on_start_time = HAL_GetTick();
-		// See if this is currently the highest priority
-		if (error_byte > 1) {
+		// See if this is currently the  led priority
+		if (error_byte > (1 << SENSE_OUT_OVERCURRENT_3V3)) {
 			time_on_ms = OVERCURRENT_FAULT_LED_TIME_MS;
 		}
 	}
@@ -111,8 +114,8 @@ static void checkForErrors(void) {
 		error(SENSE_OUT_OVERCURRENT_5V, &error_byte);
 		led_on = true;
 		led_on_start_time = HAL_GetTick();
-		// See if this is currently the highest priority
-		if (error_byte > 2) {
+		// See if this is currently the highest led priority
+		if (error_byte > (1 << SENSE_OUT_OVERCURRENT_3V3)) {
 			time_on_ms = OVERCURRENT_FAULT_LED_TIME_MS;
 		}
 	}

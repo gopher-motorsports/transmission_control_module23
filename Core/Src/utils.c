@@ -6,7 +6,7 @@ tcm_data_struct_t tcm_data = {.current_gear = ERROR_GEAR};
 
 void error(tcm_errors_t tcm_error, U8* error_store_location) {
 	HAL_GPIO_WritePin(FAULT_LED_GPIO_Port, FAULT_LED_Pin, 1);
-	*error_store_location = tcm_error;
+	*error_store_location |= (1 << tcm_error);
 }
 
 void set_clutch_solenoid(solenoid_position_t position)
