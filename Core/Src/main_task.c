@@ -115,13 +115,13 @@ static void checkForErrors(void) {
 		led_on = true;
 		led_on_start_time = HAL_GetTick();
 		// See if this is currently the highest led priority
-		if (error_byte > (1 << SENSE_OUT_OVERCURRENT_3V3)) {
+		if (error_byte > (1 << SENSE_OUT_OVERCURRENT_5V)) {
 			time_on_ms = OVERCURRENT_FAULT_LED_TIME_MS;
 		}
 	}
 
 	if(led_on) {
-		if (HAL_GetTick() - last_print_hb >= time_on_ms) {
+		if (HAL_GetTick() - led_on_start_time >= time_on_ms) {
 			HAL_GPIO_WritePin(FAULT_LED_GPIO_Port, FAULT_LED_Pin, 0);
 			led_on = false;
 		} else {
