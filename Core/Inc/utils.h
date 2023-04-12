@@ -34,8 +34,7 @@ typedef struct tcm_data_struct
 
 	U8 sw_fast_clutch;
 	U8 sw_slow_clutch;
-	U8 sw_upshift;
-	U8 sw_downshift;
+	Pending_Shift_t pending_shift;
 
 	bool currently_moving;	// Is the car moving?
 	bool gear_established;	// Gear established - Used for determining gear upon startup

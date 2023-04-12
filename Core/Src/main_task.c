@@ -19,6 +19,7 @@ CAN_HandleTypeDef* example_hcan;
 #define TCM_DATA_UPDATE_MS_BETWEEN 10
 
 #define SHIFTDEBUG // Comment out to not compile debug code
+#define AUTOMATIONS
 
 // some global variables for examples
 static Main_States_t main_State = ST_IDLE;
@@ -50,7 +51,7 @@ static void updateAndQueueParams(void);
 static void run_upshift_sm(void);
 static void run_downshift_sm(void);
 static void check_driver_inputs(void);
-static void clutch_task(U8 fastClutch, U8 slowClutch);
+static void clutch_task();
 static void shifting_task();
 
 // init
@@ -91,10 +92,6 @@ void can_buffer_handling_loop()
 	service_can_tx(example_hcan);
 }
 
-static float gearPotPos;
-static gear_t currentGear;
-static U8 gearNum;
-
 // main_loop
 //  another loop. This includes logic for sending a CAN command. Designed to be
 //  called every 10ms
@@ -120,6 +117,7 @@ void main_loop()
 	updateAndQueueParams();
 	check_driver_inputs();
 	shifting_task();
+	clutch_task(tcm_data.sw_fast_clutch, tcm_data.sw_slow_clutch);
 
 	// Debug function checkers
 #ifdef SHIFTDEBUG
@@ -187,45 +185,30 @@ static void check_driver_inputs() {
 		tcm_data.clutchless_downshift = !tcm_data.clutchless_downshift;
 	}
 
+	// Check if clutch buttons are pressed and then run clutch task, benefit of being able to be skipped over if used for special input sequences
+	if(tcm_data.sw_fast_clutch || tcm_data.sw_slow_clutch) {
+		clutch_task(tcm_data.sw_fast_clutch, tcm_data.sw_slow_clutch);
+	}
+
 	// Check button was released before trying shifting again - falling edge
 	if ((last_swUpshift_state == 1) && (swUpshift_state.data == 0)) {
-		tcm_data.sw_upshift = 1;
+		if (pending_Shift == DOWNSHIFT) {
+			pending_Shift = NONE;
+		} else {
+			pending_Shift = UPSHIFT;
+		}
 	}
 	last_swUpshift_state = swUpshift_state.data;
 
 	// Check button was released before trying shifting again - falling edge
 	if ((last_swDownshift_state == 1) && (swDownshift_state.data == 0)) {
-		tcm_data.sw_downshift = 1;
+		if(pending_Shift == UPSHIFT) {
+			pending_Shift = NONE;
+		} else {
+			pending_Shift = DOWNSHIFT;
+		}
 	}
 	last_swDownshift_state = swDownshift_state.data;
-
-	// TODO Figure out the best way to join this with the shifting task
-	// Pending shift assignment logic
-	if((main_State != ST_IDLE) && (pending_Shift != 0)) {
-		if(tcm_data.sw_upshift) {
-			if (pending_Shift == DOWNSHIFT) {
-				pending_Shift = NONE;
-			} else {
-				pending_Shift = UPSHIFT;
-			}
-			tcm_data.sw_upshift = 0;
-		}
-
-		if (tcm_data.sw_downshift) {
-			// Check if opposite signal came in at the same time for whatever reason as well as if we just need downshift
-			if(pending_Shift == UPSHIFT) {
-				pending_Shift = NONE;
-			} else {
-				pending_Shift = DOWNSHIFT;
-			}
-			tcm_data.sw_downshift = 0;
-		}
-	}
-
-	// Check if clutch buttons are pressed and then run clutch task, benefit of being able to be skipped over if used for special input sequences
-	if(tcm_data.sw_fast_clutch || tcm_data.sw_slow_clutch) {
-		clutch_task(tcm_data.sw_fast_clutch, tcm_data.sw_slow_clutch);
-	}
 }
 
 static void shifting_task() {
@@ -243,41 +226,40 @@ static void shifting_task() {
 		// always pushing the shift lever into a shifting position during
 		// idle state
 
+#ifdef AUTOMATIONS
 		// TODO WARNING this will mean shifting will not work if the shift
 		// pot gets disconnected as the lever will push one way
-		// TODO RETURN WHEN CAR DRIVES
-//		if (get_shift_pot_pos() > LEVER_NEUTRAL_POS_MM + LEVER_NEUTRAL_TOLERANCE)
-//		{
-//			// shifter pos is too high. Bring it back down
-//			set_upshift_solenoid(SOLENOID_OFF);
-//			set_downshift_solenoid(SOLENOID_ON);
-//		}
-//		else if (get_shift_pot_pos() < LEVER_NEUTRAL_POS_MM - LEVER_NEUTRAL_TOLERANCE)
-//		{
-//			// shifter pos is too low. Bring it up
-//			set_upshift_solenoid(SOLENOID_ON);
-//			set_downshift_solenoid(SOLENOID_OFF);
-//		}
-//		else
-//		{
-//			// we good. Levers off
-//			set_upshift_solenoid(SOLENOID_OFF);
-//			set_downshift_solenoid(SOLENOID_OFF);
-//		}
+		if (!tcm_data.time_shift_only) {
+			if (get_shift_pot_pos() > LEVER_NEUTRAL_POS_MM + LEVER_NEUTRAL_TOLERANCE)
+			{
+				// shifter pos is too high. Bring it back down
+				set_upshift_solenoid(SOLENOID_OFF);
+				set_downshift_solenoid(SOLENOID_ON);
+			}
+			else if (get_shift_pot_pos() < LEVER_NEUTRAL_POS_MM - LEVER_NEUTRAL_TOLERANCE)
+			{
+				// shifter pos is too low. Bring it up
+				set_upshift_solenoid(SOLENOID_ON);
+				set_downshift_solenoid(SOLENOID_OFF);
+			}
+			else
+			{
+				// we good. Levers off
+				set_upshift_solenoid(SOLENOID_OFF);
+				set_downshift_solenoid(SOLENOID_OFF);
+			}
+		}
+#endif
 
-		// start a downshift if there is one pending. This means that a new
+		// start a shift if there is one pending. This means that a new
 		// shift can be queued during the last shift
-
-		// There are a bunch of cases where variables that are 0 are set to 0 again, but this is more worth it than to add many more statements.
-		if(tcm_data.sw_upshift || pending_Shift == UPSHIFT) {
-			tcm_data.sw_upshift = 0;
+		if(pending_Shift == UPSHIFT) {
 			if (calc_validate_upshift(tcm_data.current_gear, tcm_data.sw_fast_clutch, tcm_data.sw_slow_clutch))
 			{
 				main_State = ST_HDL_UPSHIFT;
 				upshift_State = ST_U_BEGIN_SHIFT;
 			}
-		} else if (tcm_data.sw_downshift || pending_Shift == DOWNSHIFT) {
-			tcm_data.sw_downshift = 0;
+		} else if (pending_Shift == DOWNSHIFT) {
 			if (calc_validate_downshift(tcm_data.current_gear, tcm_data.sw_fast_clutch, tcm_data.sw_slow_clutch))
 			{
 				main_State = ST_HDL_DOWNSHIFT;
@@ -285,7 +267,6 @@ static void shifting_task() {
 			}
 		}
 		pending_Shift = NONE;
-
 		break;
 
 	case ST_HDL_UPSHIFT:
@@ -301,35 +282,32 @@ static void shifting_task() {
 // clutch_task
 //  for use in the main task. Sets the slow and fast drop accordingly and handles
 //  clutch position if in ST_IDLE
-static void clutch_task(U8 fastClutch, U8 slowClutch) {
+static void clutch_task() {
 	static bool using_slow_drop = false;
 	// normal clutch button must not be pressed when using slow drop. Fast drop is
 	// given priority
-	if (fastClutch) using_slow_drop = false;
+	if (tcm_data.sw_fast_clutch) using_slow_drop = false;
 
 	// if the slow drop button is pressed latch the slow drop
-	else if (slowClutch) using_slow_drop = true;
+	else if (tcm_data.sw_slow_clutch) using_slow_drop = true;
 
 	// If either clutch button pressed then enable solenoid. Always turn it on regardless of
 	// if we are shifting or not
-	if (fastClutch || slowClutch)
+	if (tcm_data.sw_fast_clutch || tcm_data.sw_slow_clutch)
 	{
 		set_clutch_solenoid(SOLENOID_ON);
 		return;
-	}
-
-	// If neither clutch button pressed and we are in IDLE and not in anti stall
-	// close clutch solenoid. This will cause clutch presses to latch to the end
-	// of a shift
-	if (!(fastClutch || slowClutch)
-			&& main_State == ST_IDLE && tcm_data.anti_stall)
-	{
+	} else if (main_State == ST_IDLE && tcm_data.anti_stall) {
+		// If neither clutch button pressed and we are in IDLE and not in anti stall
+		// close clutch solenoid. This will cause clutch presses to latch to the end
+		// of a shift
 		set_clutch_solenoid(SOLENOID_OFF);
 
 		// if we are using slow drop enable or disable the slow release valve depending
 		// on if we are near the bite point
 		if (using_slow_drop)
 		{
+			// TODO: Check if we want a way to make this not closed loop
 			// when slow dropping, we want to start by fast dropping until the bite point
 			if (get_clutch_pot_pos() < CLUTCH_OPEN_POS_MM - CLUTCH_SLOW_DROP_FAST_TO_SLOW_EXTRA_MM)
 			{
@@ -345,34 +323,6 @@ static void clutch_task(U8 fastClutch, U8 slowClutch) {
 			// not using slow drop
 			set_slow_clutch_drop(false);
 		}
-	}
-}
-
-
-
-// can_callback_function example
-
-// change_led_state
-//  a custom function that will change the state of the LED specified
-//  by parameter to remote_param. In this case parameter is a U16*, but
-//  any data type can be pointed to, as long as it is configured and casted
-//  correctly
-static void change_led_state(U8 sender, void* parameter, U8 remote_param, U8 UNUSED1, U8 UNUSED2, U8 UNUSED3)
-{
-	//HAL_GPIO_WritePin(GRN_LED_GPIO_Port, GRN_LED_Pin, !!remote_param);
-	return;
-}
-
-
-// init_error
-//  This function will stay in an infinite loop, blinking the LED in a 0.5sec period. Should only
-//  be called from the init function before the RTOS starts
-void init_error(void)
-{
-	while (1)
-	{
-		HAL_GPIO_TogglePin(HBEAT_GPIO_Port, HBEAT_Pin);
-		HAL_Delay(250);
 	}
 }
 
@@ -762,6 +712,7 @@ static void run_downshift_sm(void)
 				downshift_State = ST_D_ENTER_GEAR;
 				begin_enter_gear_tick = HAL_GetTick();
 
+				// TODO: Use this in clutchless downshift?
 				// if we were not using the clutch before, start using it now because
 				// otherwise we're probably going to fail the shift
 				tcm_data.using_clutch = true;
@@ -996,5 +947,31 @@ static void setArtificialInputs() {
 	shifterPosition_mm.data = 37.05;
 }
 #endif
+
+// can_callback_function example
+
+// change_led_state
+//  a custom function that will change the state of the LED specified
+//  by parameter to remote_param. In this case parameter is a U16*, but
+//  any data type can be pointed to, as long as it is configured and casted
+//  correctly
+static void change_led_state(U8 sender, void* parameter, U8 remote_param, U8 UNUSED1, U8 UNUSED2, U8 UNUSED3)
+{
+	//HAL_GPIO_WritePin(GRN_LED_GPIO_Port, GRN_LED_Pin, !!remote_param);
+	return;
+}
+
+
+// init_error
+//  This function will stay in an infinite loop, blinking the LED in a 0.5sec period. Should only
+//  be called from the init function before the RTOS starts
+void init_error(void)
+{
+	while (1)
+	{
+		HAL_GPIO_TogglePin(FAULT_LED_GPIO_Port, FAULT_LED_Pin);
+		HAL_Delay(250);
+	}
+}
 
 // end of GopherCAN_example.c
