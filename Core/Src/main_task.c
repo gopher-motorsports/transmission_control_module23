@@ -3,6 +3,8 @@
 
 #include "main_task.h"
 #include "main.h"
+#include "gopher_sense.h"
+#include "pulse_sensor.h"
 #include "utils.h"
 #include "gopher_sense.h"
 #include <stdio.h>
@@ -104,6 +106,7 @@ void main_loop()
 		tcm_data.current_gear = get_current_gear(gearPosition_mm.data);
 	}
 
+	check_pulse_sensors();
 	updateAndQueueParams();
 	check_driver_inputs();
 	shifting_task();
@@ -864,7 +867,7 @@ static void run_downshift_sm(void)
 //  correctly
 static void change_led_state(U8 sender, void* parameter, U8 remote_param, U8 UNUSED1, U8 UNUSED2, U8 UNUSED3)
 {
-	//HAL_GPIO_WritePin(GRN_LED_GPIO_Port, GRN_LED_Pin, !!remote_param);
+	//HAL_GPIO_WritePin(FAULT_LED_GPIO_Port, FAULT_LED_Pin, !!remote_param);
 	return;
 }
 
