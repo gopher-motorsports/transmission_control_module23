@@ -55,12 +55,10 @@ extern tcm_data_struct_t tcm_data;
 
 void update_tcm_data(void);
 float get_trans_speed();
-float get_ave_wheel_speed();
 U32 get_ECU_RPM();
 void reach_target_RPM_spark_cut(uint32_t target_rpm);
 void check_buttons_and_set_clutch_sol(solenoid_position_t position);
 void safe_spark_cut(bool state);
-float get_current_trans_wheel_ratio(void);
 float get_current_RPM_trans_ratio();
 gear_t get_current_gear();
 U32 calc_target_RPM(gear_t target_gear);
