@@ -26,7 +26,6 @@ typedef struct tcm_data_struct
 	uint32_t current_RPM;
 	uint32_t target_RPM;
 	float trans_speed;
-
 	float wheel_speed;
 
 	gear_t current_gear;
@@ -63,7 +62,7 @@ void check_buttons_and_set_clutch_sol(solenoid_position_t position);
 void safe_spark_cut(bool state);
 float get_current_trans_wheel_ratio(void);
 float get_current_RPM_trans_ratio();
-gear_t get_current_gear(float gear_pot_pos);
+gear_t get_current_gear();
 U32 calc_target_RPM(gear_t target_gear);
 bool validate_target_RPM(uint32_t target_rpm, gear_t target_gear, U8 fast_clutch, U8 slow_clutch);
 bool calc_validate_upshift(gear_t current_gear, U8 fast_clutch, U8 slow_clutch);

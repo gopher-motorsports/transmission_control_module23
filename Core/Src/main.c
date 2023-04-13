@@ -24,6 +24,8 @@
 /* USER CODE BEGIN Includes */
 #include "gopher_sense.h"
 #include "main_task.h"
+#include "main_task.h"
+#include "utils.h"
 #include <stdbool.h>
 #include "pulse_sensor.h"
 
@@ -67,9 +69,6 @@ UART_HandleTypeDef huart1;
 osThreadId main_taskHandle;
 osThreadId buffer_handlingHandle;
 /* USER CODE BEGIN PV */
-
-float resultStoreLocation1 = 0;
-float resultStoreLocation2 = 0;
 
 /* USER CODE END PV */
 
@@ -147,7 +146,7 @@ int main(void)
 		  IC_TIMER,
  		  TIM_CHANNEL_1,
  		  IC_CONVERSION_RATIO,
- 		  &resultStoreLocation1,
+ 		  &(tcm_data.trans_speed),
 		  DMA_STOPPED_TIMEOUT_MS,
  		  USE_VAR_SS,
  		  IC_LOW_SAMPLES,
