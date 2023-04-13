@@ -30,7 +30,6 @@ void update_tcm_data(void)
 {
 	tcm_data.currently_moving = get_ave_wheel_speed() > MOVING_WHEEL_SPEED_MIN_CUTOFF;
 	tcm_data.current_RPM = get_ECU_RPM();
-	tcm_data.wheel_speed = get_ave_wheel_speed();
 }
 
 // check_buttons_and_set_clutch_sol
@@ -221,11 +220,19 @@ void set_slow_clutch_drop(bool state)
 
 void set_upshift_solenoid(solenoid_position_t position)
 {
+	// Make sure other solenoid is off so they don't push on each other
+	if (position == SOLENOID_ON) {
+		set_downshift_solenoid(SOLENOID_OFF);
+	}
 	HAL_GPIO_WritePin(UPSHIFT_SOL_GPIO_Port, UPSHIFT_SOL_Pin, position);
 }
 
 void set_downshift_solenoid(solenoid_position_t position)
 {
+	// Make sure other solenoid is off so they don't push on each other
+	if (position == SOLENOID_ON) {
+		set_upshift_solenoid(SOLENOID_OFF);
+	}
 	HAL_GPIO_WritePin(DOWNSHIFT_SOL_GPIO_Port, DOWNSHIFT_SOL_Pin, position);
 }
 
@@ -271,25 +278,11 @@ float get_shift_pot_pos(void)
 	return shifterPosition_mm.data;
 }
 
-float get_ave_wheel_speed() {
-	float totalSpeed = wheelSpeedFrontLeft_mph.data + wheelSpeedFrontRight_mph.data + wheelSpeedRearRight_mph.data + wheelSpeedRearLeft_mph.data;
-	return totalSpeed / NUM_WHEELS;
-}
-
 U32 get_ECU_RPM() {
 	return engineRPM_rpm.data;
 }
 
 // Functions currently only used for debugging
-
-// current_trans_wheel_ratio
-//  Used for debugging/integration. Returns the current ratio between
-//  wheel speed and trans speed
-float get_current_trans_wheel_ratio(void)
-{
-	float rear_wheel_avg = get_ave_wheel_speed(); // Modified to be avg wheel speeds from before, may not function the same
-	return (fabs(rear_wheel_avg) < 1e-6f) ? -1.0f : (get_trans_speed()/rear_wheel_avg);
-}
 
 // current_RPM_trans_ratio
 //  Used for debugging/integration. Returns the current ratio between RPM and

@@ -78,6 +78,5 @@
 // misc defines
 #define MOVING_WHEEL_SPEED_MIN_CUTOFF 2.0f
 #define BUTTON_DEBOUNCE_MS 20
-#define NUM_WHEELS 4
 
 #endif /* INC_SHIFT_PARAMETERS_H_ */
