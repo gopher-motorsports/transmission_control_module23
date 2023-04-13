@@ -4,7 +4,6 @@
 #include "main_task.h"
 #include "main.h"
 #include "utils.h"
-#include "gopher_sense.h"
 #include <stdio.h>
 #include "shift_parameters.h"
 #include <string.h>
@@ -89,7 +88,6 @@ void main_loop()
 {
 	static U32 lastHeartbeat = 0;
 	static U32 lastPrintHB = 0;
-	static U32 lastTCMDataUpdate = 0;
 	static uint32_t last_gear_update = 0;
 
 	if (HAL_GetTick() - lastHeartbeat > HEARTBEAT_MS_BETWEEN)
@@ -104,10 +102,11 @@ void main_loop()
 		tcm_data.current_gear = get_current_gear(gearPosition_mm.data);
 	}
 
+	update_tcm_data();
 	updateAndQueueParams();
 	check_driver_inputs();
 	shifting_task();
-	clutch_task(tcm_data.sw_fast_clutch, tcm_data.sw_slow_clutch);
+	clutch_task();
 
 	// send the current tick over UART every second
 	if (HAL_GetTick() - lastPrintHB >= PRINTF_HB_MS_BETWEEN)
@@ -115,13 +114,6 @@ void main_loop()
 		printf("Current tick: %lu\n", HAL_GetTick());
 		lastPrintHB = HAL_GetTick();
 	}
-
-	if (HAL_GetTick() - lastTCMDataUpdate >= TCM_DATA_UPDATE_MS_BETWEEN) {
-		// Update shift struct with relevant data
-		update_tcm_data();
-	}
-
-
 }
 
 // Updates gcan variables
@@ -155,45 +147,46 @@ static void updateAndQueueParams(void) {
 	}
 }
 
-static float last_swUpshift_state = 0;
-static float last_swDownshift_state = 0;
+static float last_upshift_button = 0;
+static float last_downshift_button = 0;
+static float last_timeShiftOnly_button = 0;
+static float last_clutchlessDownshift_button = 0;
 
 static void check_driver_inputs() {
-	tcm_data.sw_fast_clutch = swFastClutch_state.data;
-	tcm_data.sw_slow_clutch = swSlowClutch_state.data;
+	tcm_data.sw_fast_clutch = FAST_CLUTCH_BUTTON;
+	tcm_data.sw_slow_clutch = SLOW_CLUTCH_BUTTON;
 
-	if(swButon0_state.data) {
+	// TODO: Debounce
+	if((last_timeShiftOnly_button == 1) && (TIME_SHIFT_ONLY_BUTTON == 0)) {
 		tcm_data.time_shift_only = !tcm_data.time_shift_only;
 	}
+	last_timeShiftOnly_button = TIME_SHIFT_ONLY_BUTTON;
 
-	if(swButon1_state.data) {
+	if((last_clutchlessDownshift_button == 1) && (CLUTCHLESS_DOWNSHIFT_BUTTON == 0)) {
 		tcm_data.clutchless_downshift = !tcm_data.clutchless_downshift;
 	}
+	last_clutchlessDownshift_button = CLUTCHLESS_DOWNSHIFT_BUTTON;
 
-	// Check if clutch buttons are pressed and then run clutch task, benefit of being able to be skipped over if used for special input sequences
-	if(tcm_data.sw_fast_clutch || tcm_data.sw_slow_clutch) {
-		clutch_task(tcm_data.sw_fast_clutch, tcm_data.sw_slow_clutch);
-	}
 
 	// Check button was released before trying shifting again - falling edge
-	if ((last_swUpshift_state == 1) && (swUpshift_state.data == 0)) {
+	if ((last_upshift_button == 1) && (UPSHIFT_BUTTON == 0)) {
 		if (pending_Shift == DOWNSHIFT) {
 			pending_Shift = NONE;
 		} else {
 			pending_Shift = UPSHIFT;
 		}
 	}
-	last_swUpshift_state = swUpshift_state.data;
+	last_upshift_button = UPSHIFT_BUTTON;
 
 	// Check button was released before trying shifting again - falling edge
-	if ((last_swDownshift_state == 1) && (swDownshift_state.data == 0)) {
+	if ((last_downshift_button == 1) && (DOWNSHIFT_BUTTON == 0)) {
 		if(pending_Shift == UPSHIFT) {
 			pending_Shift = NONE;
 		} else {
 			pending_Shift = DOWNSHIFT;
 		}
 	}
-	last_swDownshift_state = swDownshift_state.data;
+	last_downshift_button = DOWNSHIFT_BUTTON;
 }
 
 static void shifting_task() {

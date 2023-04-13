@@ -5,6 +5,14 @@
 #define GOPHERCAN_DEVBOARD_EXAMPLE_H
 
 #include "GopherCAN.h"
+#include "gopher_sense.h"
+
+#define FAST_CLUTCH_BUTTON (swFastClutch_state.data)
+#define SLOW_CLUTCH_BUTTON (swFastClutch_state.data)
+#define TIME_SHIFT_ONLY_BUTTON (swButon0_state.data)
+#define CLUTCHLESS_DOWNSHIFT_BUTTON (swButon1_state.data)
+#define UPSHIFT_BUTTON (swUpshift_state.data)
+#define DOWNSHIFT_BUTTON (swDownshift_state.data)
 
 typedef enum
 {
