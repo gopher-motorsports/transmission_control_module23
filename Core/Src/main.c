@@ -155,22 +155,6 @@ int main(void)
 		  MIN_SAMPLES
    );
 
-//  setup_timer_and_start_dma(
-//		  IC_TIMER,
-// 		  TIM_CHANNEL_1,
-// 		  IC_CONVERSION_RATIO,
-// 		  &resultStoreLocation1,
-//		  DMA_STOPPED_TIMEOUT_MS
-//   );
-
-//  setup_timer_and_start_dma(
-//		  &htim4,
-// 		  TIM_CHANNEL_1,
-//		  2,
-//		  &resultStoreLocation2,
-//		  40
-//   );
-
   // Set initial output states so nothing is floating
   HAL_GPIO_WritePin(SPK_CUT_GPIO_Port, SPK_CUT_Pin, 1);  
   HAL_GPIO_WritePin(CLUTCH_SOL_GPIO_Port, CLUTCH_SOL_Pin, 0);
@@ -597,7 +581,7 @@ void task_MainTask(void const * argument)
   for(;;)
   {
 	  main_loop();
-    osDelay(10);
+    osDelay(1);
   }
   /* USER CODE END 5 */
 }
