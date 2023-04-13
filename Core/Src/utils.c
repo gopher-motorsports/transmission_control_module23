@@ -30,12 +30,7 @@ void update_tcm_data(void)
 {
 	tcm_data.currently_moving = get_ave_wheel_speed() > MOVING_WHEEL_SPEED_MIN_CUTOFF;
 	tcm_data.current_RPM = get_ECU_RPM();
-	tcm_data.trans_speed = get_trans_speed();
 	tcm_data.wheel_speed = get_ave_wheel_speed();
-}
-
-float get_trans_speed() {
-	return 0; // TODO Wait to implement on an input capture branch
 }
 
 // check_buttons_and_set_clutch_sol
@@ -63,13 +58,13 @@ void safe_spark_cut(bool state)
 	// dont allow spark cut while entering or exiting neutral or if we are already
 	// below the minimum allowable RPM
 
-	// TODO RETURN WHEN CAR DRIVES
-//	if (tcm_data.target_gear == NEUTRAL || tcm_data.current_gear == NEUTRAL
-//			|| tcm_data.current_RPM < MIN_SPARK_CUT_RPM)
-//	{
-//		set_spark_cut(false);
-//		return;
-//	}
+	// TODO: Determine if we need a non-sensing one of these
+	if (tcm_data.target_gear == NEUTRAL || tcm_data.current_gear == NEUTRAL
+			|| tcm_data.current_RPM < MIN_SPARK_CUT_RPM)
+	{
+		set_spark_cut(false);
+		return;
+	}
 
 	set_spark_cut(state);
 }
@@ -242,13 +237,13 @@ void set_spark_cut(bool state)
 // get_current_gear
 // Uses the positions declared in GEAR_POT_DISTANCES_mm which are set in shift_parameters.h
 // and interpolates between them to determine the gear state
-gear_t get_current_gear(float gear_pot_pos)
+gear_t get_current_gear()
 {
 	// Search algorithm searches for if the gear position is less than a gear position distance
 	// plus the margin (0.1mm), and if it finds it, then checks if the position is right on the gear
 	// or between it and the last one by checking if the position is less than the declared
 	// distance minus the margin (0.1mm)
-	float gear_position = gear_pot_pos;
+	float gear_position = get_gear_pot_pos();
 	for(int i = 0; i < NUM_GEARS / 2; i++) {
 		if (gear_position <= GEAR_POT_DISTANCES_mm[i] + GEAR_POS_MARGIN_mm) {
 			if (gear_position <= GEAR_POT_DISTANCES_mm[i] - GEAR_POS_MARGIN_mm) {
