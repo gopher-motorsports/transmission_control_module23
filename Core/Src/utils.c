@@ -28,7 +28,6 @@ const float GEAR_POT_DISTANCES_mm[] = {
 
 void update_tcm_data(void)
 {
-	tcm_data.currently_moving = get_ave_wheel_speed() > MOVING_WHEEL_SPEED_MIN_CUTOFF;
 	tcm_data.current_RPM = get_ECU_RPM();
 }
 
@@ -108,7 +107,7 @@ U32 calc_target_RPM(gear_t target_gear) {
 	case GEAR_4:
 	case GEAR_5:
 		// This formula holds regardless of whether or not the clutch is pressed
-		return get_ave_wheel_speed(DEFAULT_WHEEL_SPEED_AVE_TIME_ms) * gear_ratios[target_gear - 1];
+		return 1; //TODO: Replace with not using wheel speed -> get_ave_wheel_speed(DEFAULT_WHEEL_SPEED_AVE_TIME_ms) * gear_ratios[target_gear - 1];
 
 	case NEUTRAL:
 	case ERROR_GEAR:
