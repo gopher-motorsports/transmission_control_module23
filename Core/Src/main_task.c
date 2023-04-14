@@ -20,7 +20,7 @@ CAN_HandleTypeDef* example_hcan;
 #define AUTO_SHIFT_LEVER_RETURN
 
 // some global variables for examples
-static Main_States_t main_state = ST_IDLE;
+Main_States_t main_state = ST_IDLE;
 static Pending_Shift_t pending_shift = NONE;
 
 static Upshift_States_t upshift_state, next_upshift_state;

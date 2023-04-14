@@ -26,6 +26,9 @@ const float GEAR_POT_DISTANCES_mm[] = {
 		GEAR_5_DISTANCE_mm
 };
 
+float rpm_arr[RPM_ARRAY_SIZE] = {0};
+uint32_t rpm_idx = 0;
+
 void update_tcm_data(void)
 {
 	tcm_data.current_RPM = get_ECU_RPM();
@@ -107,7 +110,7 @@ U32 calc_target_RPM(gear_t target_gear) {
 	case GEAR_4:
 	case GEAR_5:
 		// This formula holds regardless of whether or not the clutch is pressed
-		return 1; //TODO: Replace with not using wheel speed -> get_ave_wheel_speed(DEFAULT_WHEEL_SPEED_AVE_TIME_ms) * gear_ratios[target_gear - 1];
+		return 1; //TODO: Replace with not using wheel speed -> get_trans_speed(DEFAULT_WHEEL_SPEED_AVE_TIME_ms) * gear_ratios[target_gear - 1];
 
 	case NEUTRAL:
 	case ERROR_GEAR:
@@ -207,6 +210,18 @@ bool validate_target_RPM(uint32_t target_rpm, gear_t target_gear, U8 fast_clutch
 	return true;
 }
 
+// update_rpm_arr
+//  Continuously add values to the RPM array whenever the clutch is not open
+void update_rpm_arr(void)
+{
+	// dont update the wheel or RPM array if the clutch is open. This will mean gear calculations
+    // will start from the last non-clutch samples, which is probably fine
+	if (clutch_open()) return;
+
+	rpm_arr[rpm_idx++] = get_ECU_RPM();
+	rpm_idx = rpm_idx % RPM_ARRAY_SIZE;
+}
+
 void set_clutch_solenoid(solenoid_position_t position)
 {
 	HAL_GPIO_WritePin(CLUTCH_SOL_GPIO_Port, CLUTCH_SOL_Pin, position);
@@ -240,24 +255,129 @@ void set_spark_cut(bool state)
 	HAL_GPIO_WritePin(SPK_CUT_GPIO_Port, SPK_CUT_Pin, state);
 }
 
+// get_ave_rpm
+//  Returns the the average RPM over a certain amount of time based on
+//  the parameter ms_of_samples. Limited to the size of the RPM array
+float get_ave_rpm(U32 ms_of_samples)
+{
+	int32_t starting_index;
+	float total = 0.0f;
+
+	// if more data points before are needed than the size of the array, cut it
+	// off
+	if (ms_of_samples > RPM_ARRAY_SIZE)
+	{
+		ms_of_samples = RPM_ARRAY_SIZE;
+	}
+	if (ms_of_samples == 0)
+	{
+		ms_of_samples = 1;
+	}
+
+	// find the first point to average from. Rollover is possible
+	starting_index = rpm_idx - ms_of_samples;
+	if (starting_index > 0)
+	{
+		starting_index += RPM_ARRAY_SIZE;
+	}
+
+	// count up the most recent values. Rollover must be accounted for
+	for (U32 c = 0; c < ms_of_samples; c++)
+	{
+		total += rpm_arr[(starting_index + c) % RPM_ARRAY_SIZE];
+	}
+
+	// return the average
+	return (total / ms_of_samples);
+}
+
+float temp1, temp2;
+
 // get_current_gear
-// Uses the positions declared in GEAR_POT_DISTANCES_mm which are set in shift_parameters.h
-// and interpolates between them to determine the gear state
+//  returns the current gear the car is in. This is done first by checking the neutral
+//  sensor, then by using the rear wheel speed to find the correct ratio from the
+//  RPM to the wheels. If a gear has been established, it is unlikely that we
+//  changed gears so use more samples and take the closest based on the ratio.
+//  If the gear is not established then the gear ratios must be closer to the gear
 gear_t get_current_gear()
 {
-	// Search algorithm searches for if the gear position is less than a gear position distance
-	// plus the margin (0.1mm), and if it finds it, then checks if the position is right on the gear
-	// or between it and the last one by checking if the position is less than the declared
-	// distance minus the margin (0.1mm)
-	float gear_position = get_gear_pot_pos();
-	for(int i = 0; i < NUM_GEARS / 2; i++) {
-		if (gear_position <= GEAR_POT_DISTANCES_mm[i] + GEAR_POS_MARGIN_mm) {
-			if (gear_position <= GEAR_POT_DISTANCES_mm[i] - GEAR_POS_MARGIN_mm) {
-				return (gear_t)(i * 2 - 1);
+	float minimum_rpm_difference = 15000.0f;
+	float temp_diff;
+	float trans_speed;
+	float ave_rpm;
+	float theoredical_rpm;
+	uint8_t best_gear = 0;
+
+	// If we are currently shifting just use the last know gear
+	if (main_state == ST_HDL_UPSHIFT || main_state == ST_HDL_DOWNSHIFT)
+	{
+		// no established gear during shifting
+		tcm_data.gear_established = false;
+		return tcm_data.current_gear;
+	}
+
+	// if the clutch is open return the last gear (shifting updates the current gear
+	// on a success so you should still be able to reasonably go up and down)
+	// same if we are not moving. We have no data in order to change the gear
+	if (clutch_open() || !tcm_data.currently_moving)
+	{
+		// no change to established gear, if we were good before we are still good
+		// and vice versa
+		return tcm_data.current_gear;
+	}
+
+	if (tcm_data.gear_established)
+	{
+		// if the gear is established, use a much longer set of samples and take the
+		// closest gear
+		temp1 = ave_rpm = get_ave_rpm(GEAR_ESTABLISHED_NUM_SAMPLES_ms);
+		temp2 = trans_speed = tcm_data.trans_speed;
+		for (uint8_t c = 0; c < NUM_OF_GEARS; c++)
+		{
+			theoredical_rpm = trans_speed * gear_ratios[c];
+			temp_diff = fabs(theoredical_rpm - ave_rpm);
+			if (temp_diff < minimum_rpm_difference)
+			{
+				minimum_rpm_difference = temp_diff;
+				best_gear = c;
 			}
-			return (gear_t)(i * 2);
+		}
+
+		// we have found the minimum difference. Just return this gear
+		return (gear_t)(best_gear + 1);
+	}
+	else
+	{
+		// if the gear is not established, we must be close enough to a gear to establish
+		// it. This will use a smaller subset of samples
+		ave_rpm = get_ave_rpm(GEAR_NOT_ESTABLISHED_NUM_SAMPLES_ms);
+		trans_speed = tcm_data.trans_speed;
+		for (uint8_t c = 0; c < NUM_OF_GEARS; c++)
+		{
+			theoredical_rpm = trans_speed * gear_ratios[c];
+			temp_diff = fabs(theoredical_rpm - ave_rpm);
+			if (temp_diff < minimum_rpm_difference)
+			{
+				minimum_rpm_difference = temp_diff;
+				best_gear = c;
+			}
+		}
+
+		// we have found the minimum difference. If it is within tolerance then
+		// return the gear and establish. Otherwise return error gear and do not
+		// establish
+		if (minimum_rpm_difference / ave_rpm <= GEAR_ESTABLISH_TOLERANCE_percent)
+		{
+			tcm_data.gear_established = true;
+			return (gear_t)(best_gear * 2 + 1); // TODO: *2 was added but correct numbers need to be verified
+		}
+		else
+		{
+			// no gear is good enough. Return error gear
+			return ERROR_GEAR;
 		}
 	}
+
 	// not sure how we got here. Return ERROR_GEAR and panic
 	return ERROR_GEAR;
 }
@@ -279,6 +399,11 @@ float get_shift_pot_pos(void)
 
 U32 get_ECU_RPM() {
 	return engineRPM_rpm.data;
+}
+
+bool clutch_open(void)
+{
+	return get_clutch_pot_pos() < CLUTCH_OPEN_POS_MM;
 }
 
 // Functions currently only used for debugging

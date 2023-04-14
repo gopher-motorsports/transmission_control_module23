@@ -21,6 +21,8 @@ typedef enum
 	ST_HDL_DOWNSHIFT
 } Main_States_t;
 
+extern Main_States_t main_state;
+
 typedef enum
 {
 	NONE = 0,
