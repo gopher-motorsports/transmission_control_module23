@@ -1,5 +1,6 @@
 // GopherCAN_devboard_example.c
 //  This is a bare-bones module file that can be used in order to make a module main file
+// TODO - fix clutch toggling upshift bug
 
 #include "main_task.h"
 #include "main.h"
@@ -21,7 +22,6 @@ CAN_HandleTypeDef* example_hcan;
 
 // some global variables for examples
 Main_States_t main_state = ST_IDLE;
-static Pending_Shift_t pending_shift = NONE;
 
 static Upshift_States_t upshift_state, next_upshift_state;
 static Downshift_States_t downshift_state, next_downshift_state;
@@ -170,20 +170,20 @@ static void check_driver_inputs() {
 
 	// Check button was released before trying shifting again - falling edge
 	if ((last_upshift_button == 1) && (UPSHIFT_BUTTON == 0)) {
-		if (pending_shift == DOWNSHIFT) {
-			pending_shift = NONE;
+		if (tcm_data.pending_shift == DOWNSHIFT) {
+			tcm_data.pending_shift = NONE;
 		} else {
-			pending_shift = UPSHIFT;
+			tcm_data.pending_shift = UPSHIFT;
 		}
 	}
 	last_upshift_button = UPSHIFT_BUTTON;
 
 	// Check button was released before trying shifting again - falling edge
 	if ((last_downshift_button == 1) && (DOWNSHIFT_BUTTON == 0)) {
-		if(pending_shift == UPSHIFT) {
-			pending_shift = NONE;
+		if(tcm_data.pending_shift == UPSHIFT) {
+			tcm_data.pending_shift = NONE;
 		} else {
-			pending_shift = DOWNSHIFT;
+			tcm_data.pending_shift = DOWNSHIFT;
 		}
 	}
 	last_downshift_button = DOWNSHIFT_BUTTON;
@@ -231,20 +231,20 @@ static void shifting_task() {
 
 		// start a shift if there is one pending. This means that a new
 		// shift can be queued during the last shift
-		if(pending_shift == UPSHIFT) {
+		if(tcm_data.pending_shift == UPSHIFT) {
 			if (calc_validate_upshift(tcm_data.current_gear, tcm_data.sw_fast_clutch, tcm_data.sw_slow_clutch))
 			{
 				main_state = ST_HDL_UPSHIFT;
 				upshift_state = ST_U_BEGIN_SHIFT;
 			}
-		} else if (pending_shift == DOWNSHIFT) {
+		} else if (tcm_data.pending_shift == DOWNSHIFT) {
 			if (calc_validate_downshift(tcm_data.current_gear, tcm_data.sw_fast_clutch, tcm_data.sw_slow_clutch))
 			{
 				main_state = ST_HDL_DOWNSHIFT;
 				downshift_state = ST_D_BEGIN_SHIFT;
 			}
 		}
-		pending_shift = NONE;
+		tcm_data.pending_shift = NONE;
 		break;
 
 	case ST_HDL_UPSHIFT:
