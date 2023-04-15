@@ -52,6 +52,8 @@ typedef enum
 	CLUTCH_POSITION_TIMEOUT
 } tcm_errors_t;
 
+extern U16 error_led_on_times[];
+
 typedef enum
 {
 	SOLENOID_OFF,

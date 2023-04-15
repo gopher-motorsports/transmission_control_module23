@@ -20,6 +20,8 @@ CAN_HandleTypeDef* example_hcan;
 #define PRINTF_HB_MS_BETWEEN 1000
 #define HEARTBEAT_MS_BETWEEN 500
 #define TCM_DATA_UPDATE_MS_BETWEEN 10
+
+// Fault LED times
 #define OVERCURRENT_FAULT_LED_TIME_MS 10000
 
 //#define AUTO_SHIFT_LEVER_RETURN
@@ -37,6 +39,17 @@ U8 error_byte = 0;
 // All upper shifting debug statements
 static U32 lastShiftingChangeTick = 0;
 #endif
+// Array for the amount of time each error should latch the
+U16 error_led_on_times[] = {
+	OVERCURRENT_FAULT_LED_TIME_MS, // SENSE_OUT_OVERCURRENT_3V3
+	OVERCURRENT_FAULT_LED_TIME_MS, // SENSE_OUT_OVERCURRENT_5V
+	0,	// SHIFT_POSITION_TIMEOUT
+	0,	// CLUTCH_POSITION_TIMEOUT
+	0,
+	0,
+	0,
+	0
+};
 
 // the CAN callback function used in this example
 static void change_led_state(U8 sender, void* UNUSED_LOCAL_PARAM, U8 remote_param, U8 UNUSED1, U8 UNUSED2, U8 UNUSED3);
@@ -69,9 +82,6 @@ void init(CAN_HandleTypeDef* hcan_ptr)
 	{
 		init_error();
 	}
-
-	// Clear the error byte, so it has to keep being triggered if the error is persistent (and doesn't require a function to turn it off again)
-	error_byte = 0;
 }
 
 
@@ -126,6 +136,9 @@ void main_loop()
 		printf("Current tick: %lu\n", HAL_GetTick());
 		lastPrintHB = HAL_GetTick();
 	}
+
+	// Clear the error byte, so it has to keep being triggered if the error is persistent (and doesn't require a function to turn it off again)
+	error_byte = 0;
 }
 
 static void checkForErrors(void) {
@@ -134,24 +147,26 @@ static void checkForErrors(void) {
 	static U32 led_on_start_time = 0;
 	static U32 time_on_ms = 0;
 	static bool led_on = false;
+
+	// Can expand into for loop if more pins to read from in the future, but for now just check the 2 fault input pins.
 	if (!HAL_GPIO_ReadPin(SWITCH_FAULT_3V3_GPIO_Port, SWITCH_FAULT_3V3_Pin)) {
 		error(SENSE_OUT_OVERCURRENT_3V3, &error_byte);
-		led_on = true;
-		led_on_start_time = HAL_GetTick();
-		// See if this is currently the  led priority
-		if (error_byte > (1 << SENSE_OUT_OVERCURRENT_3V3)) {
-			time_on_ms = OVERCURRENT_FAULT_LED_TIME_MS;
-		}
+
 	}
 
 	if (!HAL_GPIO_ReadPin(SWITCH_FAULT_5V_GPIO_Port, SWITCH_FAULT_5V_Pin)) {
 		error(SENSE_OUT_OVERCURRENT_5V, &error_byte);
-		led_on = true;
+	}
+
+	if (error_byte > 0 && !led_on) {
+		U8 index = 0;
+		// Get the index of the lowest bit. Cannot become infinite because we're only here if error_byte >0
+		while (!(error_byte & (1 << index))) index++;
+
+		time_on_ms = error_led_on_times[index];
+
 		led_on_start_time = HAL_GetTick();
-		// See if this is currently the highest led priority
-		if (error_byte > (1 << SENSE_OUT_OVERCURRENT_5V)) {
-			time_on_ms = OVERCURRENT_FAULT_LED_TIME_MS;
-		}
+		led_on = true;
 	}
 
 	if(led_on) {
