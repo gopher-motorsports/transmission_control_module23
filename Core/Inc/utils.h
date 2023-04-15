@@ -75,4 +75,9 @@ float get_gear_pot_pos(void);
 float get_clutch_pot_pos(void);
 float get_shift_pot_pos(void);
 
+// Temp no gear pot functions
+bool clutch_open(void);
+void update_rpm_arr(void);
+float get_ave_rpm(U32 ms_of_samples);
+
 #endif /* INC_UTILS_H_ */
