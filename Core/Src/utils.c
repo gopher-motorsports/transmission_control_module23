@@ -8,6 +8,8 @@
 #include "utils.h"
 #include "shift_parameters.h"
 
+#define GEAR_POT_SHIFTING
+
 tcm_data_struct_t tcm_data = {.current_gear = ERROR_GEAR};
 
 const float gear_ratios[5] = {
@@ -301,6 +303,7 @@ float temp1, temp2;
 //  If the gear is not established then the gear ratios must be closer to the gear
 gear_t get_current_gear()
 {
+#ifdef GEAR_POT_SHIFTING
 	float minimum_rpm_difference = 15000.0f;
 	float temp_diff;
 	float trans_speed;
@@ -380,6 +383,23 @@ gear_t get_current_gear()
 
 	// not sure how we got here. Return ERROR_GEAR and panic
 	return ERROR_GEAR;
+#else
+	// Search algorithm searches for if the gear position is less than a gear position distance
+	// plus the margin (0.1mm), and if it finds it, then checks if the position is right on the gear
+	// or between it and the last one by checking if the position is less than the declared
+	// distance minus the margin (0.1mm)
+	float gear_position = get_gear_pot_pos();
+	for(int i = 0; i < NUM_GEARS / 2; i++) {
+		if (gear_position <= GEAR_POT_DISTANCES_mm[i] + GEAR_POS_MARGIN_mm) {
+			if (gear_position <= GEAR_POT_DISTANCES_mm[i] - GEAR_POS_MARGIN_mm) {
+				return (gear_t)(i * 2 - 1);
+			}
+			return (gear_t)(i * 2);
+		}
+	}
+	// not sure how we got here. Return ERROR_GEAR and panic
+	return ERROR_GEAR;
+#endif
 }
 
 float get_gear_pot_pos(void)
