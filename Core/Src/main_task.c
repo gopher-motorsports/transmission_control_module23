@@ -236,23 +236,25 @@ static void shifting_task() {
 			if (calc_validate_upshift(tcm_data.current_gear, tcm_data.sw_fast_clutch, tcm_data.sw_slow_clutch))
 			{
 				main_state = ST_HDL_UPSHIFT;
-				upshift_state = ST_U_BEGIN_SHIFT;
+				next_upshift_state = ST_U_BEGIN_SHIFT;
 			}
 		} else if (tcm_data.pending_shift == DOWNSHIFT) {
 			if (calc_validate_downshift(tcm_data.current_gear, tcm_data.sw_fast_clutch, tcm_data.sw_slow_clutch))
 			{
 				main_state = ST_HDL_DOWNSHIFT;
-				downshift_state = ST_D_BEGIN_SHIFT;
+				next_downshift_state = ST_D_BEGIN_SHIFT;
 			}
 		}
 		tcm_data.pending_shift = NONE;
 		break;
 
 	case ST_HDL_UPSHIFT:
+		upshift_state = next_upshift_state; // Set state to next state variable per Sebastion's request
 		run_upshift_sm();
 		break;
 
 	case ST_HDL_DOWNSHIFT:
+		downshift_state = next_downshift_state;
 		run_downshift_sm();
 		break;
 	}
@@ -332,7 +334,7 @@ static void run_upshift_sm(void)
 		set_upshift_solenoid(SOLENOID_ON); // start pushing upshift
 
 		// move on to waiting for the "preload" time to end
-		upshift_state = ST_U_LOAD_SHIFT_LVR;
+		next_upshift_state = ST_U_LOAD_SHIFT_LVR;
 
 #ifdef SHIFT_DEBUG
 		// Debug
@@ -358,7 +360,7 @@ static void run_upshift_sm(void)
 			safe_spark_cut(true);
 
 			// move on to waiting to exit gear
-			upshift_state = ST_U_EXIT_GEAR;
+			next_upshift_state = ST_U_EXIT_GEAR;
 
 #ifdef SHIFT_DEBUG
 			// Debug
@@ -399,7 +401,7 @@ static void run_upshift_sm(void)
 #endif
 				// the shifter position is above the threshold to exit. The
 				// transmission is now in a false neutral position
-				upshift_state = ST_U_ENTER_GEAR;
+				next_upshift_state = ST_U_ENTER_GEAR;
 				begin_enter_gear_tick = HAL_GetTick();
 
 #ifdef SHIFT_DEBUG
@@ -426,7 +428,7 @@ static void run_upshift_sm(void)
 				// return spark to attempt to disengage
 				begin_exit_gear_spark_return_tick = HAL_GetTick();
 				safe_spark_cut(false);
-				upshift_state = ST_U_SPARK_RETURN;
+				next_upshift_state = ST_U_SPARK_RETURN;
 
 #ifdef SHIFT_DEBUG
 				// Debug
@@ -441,7 +443,7 @@ static void run_upshift_sm(void)
 		else
 		{
 			if (HAL_GetTick() - begin_exit_gear_tick > UPSHIFT_EXIT_GEAR_TIME_MS) {
-				upshift_state = ST_U_ENTER_GEAR;
+				next_upshift_state = ST_U_ENTER_GEAR;
 				begin_enter_gear_tick = HAL_GetTick();
 
 #ifdef SHIFT_DEBUG
@@ -500,7 +502,7 @@ static void run_upshift_sm(void)
 			// next phase of the shift. If it was not successful (timeout) move
 			// on anyway
 			safe_spark_cut(true);
-			upshift_state = ST_U_ENTER_GEAR;
+			next_upshift_state = ST_U_ENTER_GEAR;
 			begin_enter_gear_tick = HAL_GetTick();
 
 		}
@@ -527,7 +529,7 @@ static void run_upshift_sm(void)
 			{
 #endif
 				// shift position says we are done shifting
-				upshift_state = ST_U_FINISH_SHIFT;
+				next_upshift_state = ST_U_FINISH_SHIFT;
 
 #ifdef SHIFT_DEBUG
 				// Debug
@@ -551,7 +553,7 @@ static void run_upshift_sm(void)
 				// at this point the shift was probably not successful. Note this so we
 				// dont increment the gears and move on
 				tcm_data.successful_shift = false;
-				upshift_state = ST_U_FINISH_SHIFT;
+				next_upshift_state = ST_U_FINISH_SHIFT;
 
 #ifdef SHIFT_DEBUG
 				// Debug
@@ -572,7 +574,7 @@ static void run_upshift_sm(void)
 
 			if (HAL_GetTick() - begin_enter_gear_tick > UPSHIFT_ENTER_GEAR_TIME_MS)
 			{
-				upshift_state = ST_U_FINISH_SHIFT;
+				next_upshift_state = ST_U_FINISH_SHIFT;
 
 #ifdef SHIFT_DEBUG
 				// Debug
@@ -654,7 +656,7 @@ static void run_downshift_sm(void)
 		set_clutch_solenoid(tcm_data.using_clutch ? SOLENOID_ON : SOLENOID_OFF);
 
 		// move on to loading the shift lever
-		downshift_state = ST_D_LOAD_SHIFT_LVR;
+		next_downshift_state = ST_D_LOAD_SHIFT_LVR;
 
 #ifdef SHIFT_DEBUG
 		// Debug
@@ -683,7 +685,7 @@ static void run_downshift_sm(void)
 			// to exit the gear
 			safe_spark_cut(false);
 			begin_exit_gear_tick = HAL_GetTick();
-			downshift_state = ST_D_EXIT_GEAR;
+			next_downshift_state = ST_D_EXIT_GEAR;
 
 #ifdef SHIFT_DEBUG
 			// Debug
@@ -718,7 +720,7 @@ static void run_downshift_sm(void)
 #endif
 				// we have left the last gear and are in a false neutral. Move on to
 				// the next part of the shift
-				downshift_state = ST_D_ENTER_GEAR;
+				next_downshift_state = ST_D_ENTER_GEAR;
 				begin_enter_gear_tick = HAL_GetTick();
 
 #ifdef SHIFT_DEBUG
@@ -740,7 +742,7 @@ static void run_downshift_sm(void)
 			if (HAL_GetTick() - begin_exit_gear_tick > DOWNSHIFT_EXIT_TIMEOUT_MS)
 			{
 				// We could not release the gear for some reason. Keep trying anyway
-				downshift_state = ST_D_ENTER_GEAR;
+				next_downshift_state = ST_D_ENTER_GEAR;
 				begin_enter_gear_tick = HAL_GetTick();
 
 				// TODO: Use this in clutchless downshift?
@@ -761,7 +763,7 @@ static void run_downshift_sm(void)
 		else
 		{
 			if (HAL_GetTick() - begin_exit_gear_tick > DOWNSHIFT_EXIT_GEAR_TIME_MS) {
-				downshift_state = ST_D_ENTER_GEAR;
+				next_downshift_state = ST_D_ENTER_GEAR;
 				begin_enter_gear_tick = HAL_GetTick();
 
 #ifdef SHIFT_DEBUG
@@ -800,7 +802,7 @@ static void run_downshift_sm(void)
 				// the clutch lever has moved enough to finish the shift. Turn off
 				// any spark cutting and move on to finishing the shift
 				safe_spark_cut(false);
-				downshift_state = ST_D_FINISH_SHIFT;
+				next_downshift_state = ST_D_FINISH_SHIFT;
 
 #ifdef SHIFT_DEBUG
 				// Debug
@@ -826,7 +828,7 @@ static void run_downshift_sm(void)
 				tcm_data.using_clutch = true;
 				set_clutch_solenoid(SOLENOID_ON);
 				safe_spark_cut(false);
-				downshift_state = ST_D_HOLD_CLUTCH;
+				next_downshift_state = ST_D_HOLD_CLUTCH;
 				begin_hold_clutch_tick = HAL_GetTick();
 
 #ifdef SHIFT_DEBUG
@@ -870,7 +872,7 @@ static void run_downshift_sm(void)
 		if (HAL_GetTick() - begin_hold_clutch_tick > DOWNSHIFT_FAIL_EXTRA_CLUTCH_HOLD)
 		{
 			// done giving the extra clutch. Move on to finishing the shift
-			downshift_state = ST_D_FINISH_SHIFT;
+			next_downshift_state = ST_D_FINISH_SHIFT;
 
 #ifdef SHIFT_DEBUG
 			// Debug
