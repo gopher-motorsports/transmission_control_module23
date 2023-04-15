@@ -8,8 +8,6 @@
 #include "utils.h"
 #include "shift_parameters.h"
 
-#define GEAR_POT_SHIFTING
-
 tcm_data_struct_t tcm_data = {.current_gear = ERROR_GEAR};
 
 const float gear_ratios[5] = {
@@ -146,7 +144,7 @@ bool calc_validate_upshift(gear_t current_gear, U8 fast_clutch, U8 slow_clutch) 
 		case GEAR_2:
 		case GEAR_3:
 		case GEAR_4:
-			tcm_data.target_gear = current_gear + 1;
+			tcm_data.target_gear = current_gear + 2;
 			tcm_data.target_RPM = calc_target_RPM(tcm_data.target_gear);
 			// always allow shifts for now
 			//return validate_target_RPM();
@@ -173,7 +171,7 @@ bool calc_validate_downshift(gear_t current_gear, U8 fast_clutch, U8 slow_clutch
 	case GEAR_3:
 	case GEAR_4:
 	case GEAR_5:
-		tcm_data.target_gear = current_gear - 1;
+		tcm_data.target_gear = current_gear - 2;
 		tcm_data.target_RPM = calc_target_RPM(tcm_data.target_gear);
 		// for now always allow downshifts, even if the target RPM is too high
 		//return validate_target_RPM();
@@ -236,7 +234,7 @@ void set_slow_clutch_drop(bool state)
 
 void set_upshift_solenoid(solenoid_position_t position)
 {
-	// Make sure other solenoid is off so they don't push on each other
+	// Make sure other solenoid is off so they don't push on each other - priority to most recent call
 	if (position == SOLENOID_ON) {
 		set_downshift_solenoid(SOLENOID_OFF);
 	}
@@ -245,7 +243,7 @@ void set_upshift_solenoid(solenoid_position_t position)
 
 void set_downshift_solenoid(solenoid_position_t position)
 {
-	// Make sure other solenoid is off so they don't push on each other
+	// Make sure other solenoid is off so they don't push on each other - priority to most recent call
 	if (position == SOLENOID_ON) {
 		set_upshift_solenoid(SOLENOID_OFF);
 	}
@@ -303,7 +301,7 @@ float temp1, temp2;
 //  If the gear is not established then the gear ratios must be closer to the gear
 gear_t get_current_gear()
 {
-#ifdef GEAR_POT_SHIFTING
+#ifdef NO_GEAR_POT
 	float minimum_rpm_difference = 15000.0f;
 	float temp_diff;
 	float trans_speed;
