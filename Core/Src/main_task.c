@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include "shift_parameters.h"
 #include <string.h>
+#include <stdbool.h>
 
 // the HAL_CAN struct. This example only works for a single CAN bus
 CAN_HandleTypeDef* example_hcan;
@@ -19,6 +20,7 @@ CAN_HandleTypeDef* example_hcan;
 #define PRINTF_HB_MS_BETWEEN 1000
 #define HEARTBEAT_MS_BETWEEN 500
 #define TCM_DATA_UPDATE_MS_BETWEEN 10
+#define OVERCURRENT_FAULT_LED_TIME_MS 10000
 
 //#define AUTO_SHIFT_LEVER_RETURN
 #define SHIFT_DEBUG
@@ -29,6 +31,7 @@ Main_States_t main_state = ST_IDLE;
 static Upshift_States_t upshift_state, next_upshift_state;
 static Downshift_States_t downshift_state, next_downshift_state;
 U8 last_button_state = 0;
+U8 error_byte = 0;
 
 #ifdef SHIFT_DEBUG
 // All upper shifting debug statements
@@ -44,6 +47,7 @@ static void run_downshift_sm(void);
 static void check_driver_inputs(void);
 static void clutch_task();
 static void shifting_task();
+static void checkForErrors(void);
 
 // init
 //  What needs to happen on startup in order to run GopherCAN
@@ -65,6 +69,9 @@ void init(CAN_HandleTypeDef* hcan_ptr)
 	{
 		init_error();
 	}
+
+	// Clear the error byte, so it has to keep being triggered if the error is persistent (and doesn't require a function to turn it off again)
+	error_byte = 0;
 }
 
 
@@ -107,6 +114,7 @@ void main_loop()
 
 	check_pulse_sensors();
 	update_tcm_data();
+	checkForErrors();
 	updateAndQueueParams();
 	check_driver_inputs();
 	shifting_task();
@@ -120,6 +128,42 @@ void main_loop()
 	}
 }
 
+static void checkForErrors(void) {
+	// TODO: Scale this to include different modes and things for error states
+
+	static U32 led_on_start_time = 0;
+	static U32 time_on_ms = 0;
+	static bool led_on = false;
+	if (!HAL_GPIO_ReadPin(SWITCH_FAULT_3V3_GPIO_Port, SWITCH_FAULT_3V3_Pin)) {
+		error(SENSE_OUT_OVERCURRENT_3V3, &error_byte);
+		led_on = true;
+		led_on_start_time = HAL_GetTick();
+		// See if this is currently the  led priority
+		if (error_byte > (1 << SENSE_OUT_OVERCURRENT_3V3)) {
+			time_on_ms = OVERCURRENT_FAULT_LED_TIME_MS;
+		}
+	}
+
+	if (!HAL_GPIO_ReadPin(SWITCH_FAULT_5V_GPIO_Port, SWITCH_FAULT_5V_Pin)) {
+		error(SENSE_OUT_OVERCURRENT_5V, &error_byte);
+		led_on = true;
+		led_on_start_time = HAL_GetTick();
+		// See if this is currently the highest led priority
+		if (error_byte > (1 << SENSE_OUT_OVERCURRENT_5V)) {
+			time_on_ms = OVERCURRENT_FAULT_LED_TIME_MS;
+		}
+	}
+
+	if(led_on) {
+		if (HAL_GetTick() - led_on_start_time >= time_on_ms) {
+			HAL_GPIO_WritePin(FAULT_LED_GPIO_Port, FAULT_LED_Pin, 0);
+			led_on = false;
+		} else {
+			HAL_GPIO_WritePin(FAULT_LED_GPIO_Port, FAULT_LED_Pin, 1);
+		}
+	}
+}
+
 // Updates gcan variables
 static void updateAndQueueParams(void) {
 	update_and_queue_param_float(&counterShaftSpeed_rpm, tcm_data.trans_speed);
@@ -130,6 +174,7 @@ static void updateAndQueueParams(void) {
 	update_and_queue_param_u8(&tcmUsingClutch_state, tcm_data.using_clutch);
 	update_and_queue_param_u8(&tcmTimeShiftOnly_state, tcm_data.time_shift_only);
 	update_and_queue_param_u8(&tcmClutchlessDownshift_state, tcm_data.clutchless_downshift);
+	update_and_queue_param_u8(&tcmError_state, error_byte);
 
 	switch (main_state)
 	{

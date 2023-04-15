@@ -24,7 +24,6 @@
 /* USER CODE BEGIN Includes */
 #include "gopher_sense.h"
 #include "main_task.h"
-#include "main_task.h"
 #include "utils.h"
 #include <stdbool.h>
 #include "pulse_sensor.h"

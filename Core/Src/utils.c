@@ -222,6 +222,11 @@ void update_rpm_arr(void)
 	rpm_idx = rpm_idx % RPM_ARRAY_SIZE;
 }
 
+void error(tcm_errors_t tcm_error, U8* error_store_location) {
+	HAL_GPIO_WritePin(FAULT_LED_GPIO_Port, FAULT_LED_Pin, 1);
+	*error_store_location |= (1 << tcm_error);
+}
+
 void set_clutch_solenoid(solenoid_position_t position)
 {
 	HAL_GPIO_WritePin(CLUTCH_SOL_GPIO_Port, CLUTCH_SOL_Pin, position);
@@ -415,7 +420,8 @@ float get_shift_pot_pos(void)
 	return shifterPosition_mm.data;
 }
 
-U32 get_ECU_RPM() {
+U32 get_ECU_RPM()
+{
 	return engineRPM_rpm.data;
 }
 
