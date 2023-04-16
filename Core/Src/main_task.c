@@ -115,12 +115,16 @@ void main_loop()
 		HAL_GPIO_TogglePin(HBEAT_GPIO_Port, HBEAT_Pin);
 	}
 
+#ifdef NO_GEAR_POT
 	// TODO: Figure out if this should be staggered or not
 	if (HAL_GetTick() - last_gear_update >= GEAR_UPDATE_TIME_MS)
 	{
 		last_gear_update = HAL_GetTick();
 		tcm_data.current_gear = get_current_gear();
 	}
+#else
+	tcm_data.current_gear = get_current_gear();
+#endif
 
 	check_pulse_sensors();
 	update_tcm_data();
@@ -393,7 +397,13 @@ static void run_upshift_sm(void)
 		// upshift
 
 		begin_shift_tick = HAL_GetTick(); // Log that first begin shift tick
-		initial_gear = get_current_gear();
+
+#ifdef NO_GEAR_POT
+		tcm_data.current_gear = get_current_gear();
+#endif
+
+		initial_gear = tcm_data.current_gear;
+
 		set_upshift_solenoid(SOLENOID_ON); // start pushing upshift
 
 		// move on to waiting for the "preload" time to end
@@ -665,12 +675,15 @@ static void run_upshift_sm(void)
 		safe_spark_cut(false);
 		tcm_data.using_clutch = false;
 
+#ifdef NO_GEAR_POT
 		// if the gear didn't correctly increase,
-		// declare unsuccessful
+		// declare unsuccessful. Only check if
+		// no gear pot because otherwise it would be updated every cycle.
 		tcm_data.current_gear = get_current_gear();
+#endif
 
 		// Determine if the shift was successful by checking if we changed gear correctly
-		tcm_data.successful_shift = tcm_data.current_gear > initial_gear;
+		tcm_data.successful_shift = tcm_data.current_gear > initial_gear + 1;
 		tcm_data.gear_established = tcm_data.successful_shift;
 
 		// done with the upshift state machine
@@ -709,7 +722,11 @@ static void run_downshift_sm(void)
 		// lever does not seem to be as important for downshifts, but still
 		// give some time for it
 		begin_shift_tick = HAL_GetTick();
-		initial_gear = get_current_gear();
+
+#ifdef NO_GEAR_POT
+		tcm_data.current_gear = get_current_gear();
+#endif
+		initial_gear = tcm_data.current_gear;
 
 		set_downshift_solenoid(SOLENOID_ON);
 
@@ -959,10 +976,13 @@ static void run_downshift_sm(void)
 		set_clutch_solenoid(SOLENOID_OFF);
 		tcm_data.using_clutch = false;
 
+#ifdef NO_GEAR_POT
+		tcm_data.current_gear = get_current_gear();
+#endif
+
 		// Determine if the shift was successful by checking if we changed gear correctly
 		tcm_data.successful_shift = tcm_data.current_gear < initial_gear;
 		tcm_data.gear_established = tcm_data.successful_shift;
-		tcm_data.current_gear = get_current_gear();
 
 		// done with the downshift state machine
 		set_downshift_solenoid(SOLENOID_OFF);
