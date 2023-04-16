@@ -1,7 +1,6 @@
 /*
- * Testing list:
- * 1. Make sure variables update correctly
- * 2. Clutch task - make sure all states covered - fast, slow, bites after distance, different when idle, different if in antistall.
+ * Tuning List
+ * 1. Gear wheel ratios - Last year was for wheel speed and is now for transmission speed
  */
 
 #include <math.h>
@@ -59,7 +58,6 @@ void safe_spark_cut(bool state)
 	// dont allow spark cut while entering or exiting neutral or if we are already
 	// below the minimum allowable RPM
 
-	// TODO: Determine if we need a non-sensing one of these
 	if (tcm_data.target_gear == NEUTRAL || tcm_data.current_gear == NEUTRAL
 			|| tcm_data.current_RPM < MIN_SPARK_CUT_RPM)
 	{
@@ -93,8 +91,7 @@ void reach_target_RPM_spark_cut(uint32_t target_rpm)
 }
 
 // calc_target_RPM
-//  Using target gear and wheel speed return the RPM we need to hit to enter that
-//  gear
+//  Using target gear and wheel speed return the RPM we need to hit to enter that gear
 U32 calc_target_RPM(gear_t target_gear) {
 	// If car isn't moving then there isn't a target RPM
 	if (!tcm_data.currently_moving)
@@ -102,33 +99,22 @@ U32 calc_target_RPM(gear_t target_gear) {
 		return 0;
 	}
 
-	switch (target_gear)
-	{
-	case GEAR_1:
-	case GEAR_2:
-	case GEAR_3:
-	case GEAR_4:
-	case GEAR_5:
-		// This formula holds regardless of whether or not the clutch is pressed
-		return 1; //TODO: Replace with not using wheel speed -> get_trans_speed(DEFAULT_WHEEL_SPEED_AVE_TIME_ms) * gear_ratios[target_gear - 1];
-
-	case NEUTRAL:
-	case ERROR_GEAR:
-	default:
+	if (target_gear == NEUTRAL || target_gear == ERROR_GEAR) {
 		// If we are in ERROR GEAR or shifting into neutral no target RPM
 		return 0;
 	}
+
+	return tcm_data.trans_speed * gear_ratios[target_gear - 2];
 }
 
 // calc_validate_upshift
 //  will check if an upshift is valid in the current state of the car. Will also
 //  set the target gear and target RPM if the shift is valid
-//  TODO: Deal with in-between gears
 bool calc_validate_upshift(gear_t current_gear, U8 fast_clutch, U8 slow_clutch) {
 	switch (current_gear)
 		{
 		case NEUTRAL:
-			// Clutch must be pressed to go from NEUTRAL -> 1st // TODO Check if the case
+			// Clutch must be pressed to go from NEUTRAL -> 1st
 			if (fast_clutch || slow_clutch)
 			{
 				tcm_data.target_RPM = 0;
@@ -149,7 +135,14 @@ bool calc_validate_upshift(gear_t current_gear, U8 fast_clutch, U8 slow_clutch) 
 			// always allow shifts for now
 			//return validate_target_RPM();
 			return true;
-
+		// TODO: Check if this is worth it
+		case GEAR_0_5:
+		case GEAR_1_5:
+		case GEAR_2_5:
+		case GEAR_3_5:
+		case GEAR_4_5:
+			tcm_data.target_gear = current_gear + 1;
+			tcm_data.target_RPM = calc_target_RPM(tcm_data.target_gear);
 		case GEAR_5:
 		case ERROR_GEAR:
 		default:
@@ -176,7 +169,13 @@ bool calc_validate_downshift(gear_t current_gear, U8 fast_clutch, U8 slow_clutch
 		// for now always allow downshifts, even if the target RPM is too high
 		//return validate_target_RPM();
 		return true;
-
+	case GEAR_0_5:
+	case GEAR_1_5:
+	case GEAR_2_5:
+	case GEAR_3_5:
+	case GEAR_4_5:
+		tcm_data.target_gear = current_gear - 1;
+		tcm_data.target_RPM = calc_target_RPM(tcm_data.target_gear);
 	case NEUTRAL:
 	case ERROR_GEAR:
 	default:
@@ -332,7 +331,7 @@ gear_t get_current_gear()
 		// if the gear is established, use a much longer set of samples and take the
 		// closest gear
 		temp1 = ave_rpm = get_ave_rpm(GEAR_ESTABLISHED_NUM_SAMPLES_ms);
-		temp2 = trans_speed = tcm_data.trans_speed;
+		temp2 = trans_speed = tcm_data.trans_speed; // TODO - need custom amount of samples
 		for (uint8_t c = 0; c < NUM_OF_GEARS; c++)
 		{
 			theoredical_rpm = trans_speed * gear_ratios[c];
@@ -344,15 +343,15 @@ gear_t get_current_gear()
 			}
 		}
 
-		// we have found the minimum difference. Just return this gear
-		return (gear_t)(best_gear + 1);
+		// we have found the minimum difference. Just return this gear. Multiply by 2 to not use in between gears.
+		return (gear_t)(best_gear * 2);
 	}
 	else
 	{
 		// if the gear is not established, we must be close enough to a gear to establish
 		// it. This will use a smaller subset of samples
 		ave_rpm = get_ave_rpm(GEAR_NOT_ESTABLISHED_NUM_SAMPLES_ms);
-		trans_speed = tcm_data.trans_speed;
+		trans_speed = tcm_data.trans_speed; // TODO - need custom amount of samples
 		for (uint8_t c = 0; c < NUM_OF_GEARS; c++)
 		{
 			theoredical_rpm = trans_speed * gear_ratios[c];
@@ -370,7 +369,8 @@ gear_t get_current_gear()
 		if (minimum_rpm_difference / ave_rpm <= GEAR_ESTABLISH_TOLERANCE_percent)
 		{
 			tcm_data.gear_established = true;
-			return (gear_t)(best_gear * 2 + 1); // TODO: *2 was added but correct numbers need to be verified
+			// Multiply by 2 to not use in between gears.
+			return (gear_t)(best_gear * 2);
 		}
 		else
 		{
