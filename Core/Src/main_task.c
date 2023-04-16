@@ -235,7 +235,6 @@ static void check_driver_inputs() {
 	}
 	last_clutchlessDownshift_button = CLUTCHLESS_DOWNSHIFT_BUTTON;
 
-
 	// Check button was released before trying shifting again - falling edge
 	if ((last_upshift_button == 1) && (UPSHIFT_BUTTON == 0)) {
 		if (tcm_data.pending_shift == DOWNSHIFT) {

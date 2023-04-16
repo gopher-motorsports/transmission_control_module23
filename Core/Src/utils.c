@@ -59,7 +59,6 @@ void safe_spark_cut(bool state)
 	// dont allow spark cut while entering or exiting neutral or if we are already
 	// below the minimum allowable RPM
 
-	// TODO: Determine if we need a non-sensing one of these
 	if (tcm_data.target_gear == NEUTRAL || tcm_data.current_gear == NEUTRAL
 			|| tcm_data.current_RPM < MIN_SPARK_CUT_RPM)
 	{
@@ -128,7 +127,7 @@ bool calc_validate_upshift(gear_t current_gear, U8 fast_clutch, U8 slow_clutch) 
 	switch (current_gear)
 		{
 		case NEUTRAL:
-			// Clutch must be pressed to go from NEUTRAL -> 1st // TODO Check if the case
+			// Clutch must be pressed to go from NEUTRAL -> 1st
 			if (fast_clutch || slow_clutch)
 			{
 				tcm_data.target_RPM = 0;
@@ -149,7 +148,6 @@ bool calc_validate_upshift(gear_t current_gear, U8 fast_clutch, U8 slow_clutch) 
 			// always allow shifts for now
 			//return validate_target_RPM();
 			return true;
-
 		case GEAR_5:
 		case ERROR_GEAR:
 		default:
@@ -300,7 +298,7 @@ float temp1, temp2;
 
 // get_current_gear
 //  returns the current gear the car is in. This is done first by checking the neutral
-//  sensor, then by using the rear wheel speed to find the correct ratio from the
+//  sensor, then by using the transmission speed to find the correct ratio from the
 //  RPM to the wheels. If a gear has been established, it is unlikely that we
 //  changed gears so use more samples and take the closest based on the ratio.
 //  If the gear is not established then the gear ratios must be closer to the gear
