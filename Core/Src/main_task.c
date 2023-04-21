@@ -544,13 +544,12 @@ static void run_upshift_sm(void)
 		// the shifter has moved above the threshold of exiting the gear. Spark
 		// must be cut again to reach the correct RPM for the next gear. If
 		// enough time has passed return spark anyway
-		if (get_shift_pot_pos() > UPSHIFT_EXIT_POS_MM ||
-				HAL_GetTick() - begin_exit_gear_spark_return_tick > UPSHIFT_EXIT_SPARK_RETURN_MS)
-		{
+		if (get_shift_pot_pos() > UPSHIFT_EXIT_POS_MM
 #else
-		if (tcm_data.current_gear > initial_gear)
-		{
+		if (tcm_data.current_gear > initial_gear
 #endif
+			|| HAL_GetTick() - begin_exit_gear_spark_return_tick > UPSHIFT_EXIT_SPARK_RETURN_MS)
+		{
 
 #ifdef SHIFT_DEBUG
 			// Debug
@@ -682,7 +681,7 @@ static void run_upshift_sm(void)
 #endif
 
 		// Determine if the shift was successful by checking if we changed gear correctly
-		tcm_data.successful_shift = tcm_data.current_gear > initial_gear + 1;
+		tcm_data.successful_shift = tcm_data.current_gear > initial_gear + 2;
 		tcm_data.gear_established = tcm_data.successful_shift;
 
 		// done with the upshift state machine
@@ -762,7 +761,7 @@ static void run_downshift_sm(void)
 		{
 			// done with preloading. Start allowing blips and move on to trying
 			// to exit the gear
-			safe_spark_cut(false);
+			safe_spark_cut(false); //TODO: Guaruntee spark cut if time shifting or do in function?
 			begin_exit_gear_tick = HAL_GetTick();
 			next_downshift_state = ST_D_EXIT_GEAR;
 
@@ -943,7 +942,7 @@ static void run_downshift_sm(void)
 		// some extra time to hold the clutch open. This is in the case that
 		// the shift lever does not hit the threshold and might needs some
 		// input from the driver to hit the right revs
-		set_clutch_solenoid(SOLENOID_ON);
+		set_clutch_solenoid(SOLENOID_ON); // TODO: Should this still happen in clutchless downshift? Double verify
 		set_downshift_solenoid(SOLENOID_ON);
 		safe_spark_cut(false);
 
@@ -980,7 +979,7 @@ static void run_downshift_sm(void)
 #endif
 
 		// Determine if the shift was successful by checking if we changed gear correctly
-		tcm_data.successful_shift = tcm_data.current_gear < initial_gear;
+		tcm_data.successful_shift = tcm_data.current_gear < initial_gear - 2;
 		tcm_data.gear_established = tcm_data.successful_shift;
 
 		// done with the downshift state machine
