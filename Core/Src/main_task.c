@@ -116,7 +116,6 @@ void main_loop()
 	}
 
 #ifdef NO_GEAR_POT
-	// TODO: Figure out if this should be staggered or not
 	if (HAL_GetTick() - last_gear_update >= GEAR_UPDATE_TIME_MS)
 	{
 		last_gear_update = HAL_GetTick();
@@ -146,8 +145,6 @@ void main_loop()
 }
 
 static void checkForErrors(void) {
-	// TODO: Scale this to include different modes and things for error states
-
 	static U32 led_on_start_time = 0;
 	static U32 time_on_ms = 0;
 	static bool led_on = false;
@@ -224,7 +221,6 @@ static void check_driver_inputs() {
 	tcm_data.sw_fast_clutch = FAST_CLUTCH_BUTTON;
 	tcm_data.sw_slow_clutch = SLOW_CLUTCH_BUTTON;
 
-	// TODO: Debounce
 	if((last_timeShiftOnly_button == 1) && (TIME_SHIFT_ONLY_BUTTON == 0)) {
 		tcm_data.time_shift_only = !tcm_data.time_shift_only;
 	}
@@ -445,7 +441,7 @@ static void run_upshift_sm(void)
 		}
 		break;
 
-	case ST_U_EXIT_GEAR:
+	case ST_U_EXIT_GEAR: // **************************************************
 		// wait until the threshold for the lever leaving the last gear has
 		// been met or the timeout hits. During this time spark should be cut
 		// to change engine driving the wheels to the wheels driving the
@@ -530,8 +526,8 @@ static void run_upshift_sm(void)
 		}
 		break;
 
-	// Unused in time based shifting TODO: Check if this should be the case
-	case ST_U_SPARK_RETURN:
+	// Unused in time based shifting
+	case ST_U_SPARK_RETURN: // ********************************************
 		// A common cause of a failed disengagement is the transition from
 		// the engine driving the wheels to the wheels driving the engine
 		// too quickly, meaning there is no way to exit the gear while
@@ -579,7 +575,7 @@ static void run_upshift_sm(void)
 		}
 		break;
 
-	case ST_U_ENTER_GEAR:
+	case ST_U_ENTER_GEAR: // *********************************************
 		// we are in a false neutral and waiting to enter the gear. Likely
 		// the RPMs will need to drop a little more to make it to the next
 		// gear
@@ -659,7 +655,7 @@ static void run_upshift_sm(void)
 		}
 		break;
 
-	case ST_U_FINISH_SHIFT:
+	case ST_U_FINISH_SHIFT: // **********************************************
 		// wrapping up the upshift. First make sure we have been been cutting
 		// spark for long enough (to prevent a case where the shifter position
 		// is stuck in the success region from stopping shifting), then work
@@ -714,7 +710,7 @@ static void run_downshift_sm(void)
 
 	switch (downshift_state)
 	{
-	case ST_D_BEGIN_SHIFT:
+	case ST_D_BEGIN_SHIFT: // **********************************************
 		// at the beginning of a shift reset all of the variables and start
 		// pushing on the clutch and downshift solenoid. Loading the shift
 		// lever does not seem to be as important for downshifts, but still
@@ -746,7 +742,7 @@ static void run_downshift_sm(void)
 #endif
 		break;
 
-	case ST_D_LOAD_SHIFT_LVR:
+	case ST_D_LOAD_SHIFT_LVR: // **********************************************
 		// load the shift lever. This is less important as we do not seem to
 		// have issues leaving the gear during a downshift
 		set_downshift_solenoid(SOLENOID_ON);
@@ -761,7 +757,7 @@ static void run_downshift_sm(void)
 		{
 			// done with preloading. Start allowing blips and move on to trying
 			// to exit the gear
-			safe_spark_cut(false); //TODO: Guaruntee spark cut if time shifting or do in function?
+			safe_spark_cut(false);
 			begin_exit_gear_tick = HAL_GetTick();
 			next_downshift_state = ST_D_EXIT_GEAR;
 
@@ -776,7 +772,7 @@ static void run_downshift_sm(void)
 		}
 		break;
 
-	case ST_D_EXIT_GEAR:
+	case ST_D_EXIT_GEAR: // **********************************************
 		// this is the region to blip in to leave the gear. Usually we dont
 		// have much of an issue leaving. Dont spark cut under any circumstances
 		// as we need the blip to bring the RPM up if we have not left the gear
@@ -823,10 +819,10 @@ static void run_downshift_sm(void)
 				next_downshift_state = ST_D_ENTER_GEAR;
 				begin_enter_gear_tick = HAL_GetTick();
 
-				// TODO: Use this in clutchless downshift?
 				// if we were not using the clutch before, start using it now because
-				// otherwise we're probably going to fail the shift
-				tcm_data.using_clutch = true;
+				// otherwise we're probably going to fail the shift. Don't use if we're
+				// using clutchless downshift though
+				tcm_data.using_clutch = !tcm_data.clutchless_downshift;
 
 #ifdef SHIFT_DEBUG
 				// Debug
@@ -856,7 +852,7 @@ static void run_downshift_sm(void)
 		}
 		break;
 
-	case ST_D_ENTER_GEAR:
+	case ST_D_ENTER_GEAR: // **********************************************
 		// now we are in a false neutral position we want to keep pushing the
 		// shift solenoid, but now dynamically spark cut if the blip is too big
 		// and the RPM goes too high to enter the next gear
@@ -874,7 +870,7 @@ static void run_downshift_sm(void)
 			if (get_shift_pot_pos() < DOWNSHIFT_ENTER_POS_MM)
 			{
 #else
-			if (tcm_data.current_gear == (initial_gear - 2)
+			if (tcm_data.current_gear == (initial_gear - 2))
 			{
 #endif
 				// the clutch lever has moved enough to finish the shift. Turn off
@@ -883,7 +879,7 @@ static void run_downshift_sm(void)
 				next_downshift_state = ST_D_FINISH_SHIFT;
 
 #ifdef SHIFT_DEBUG
-				// Debug
+//				// Debug
 				printf("=== Downshift State: FINISH_SHIFT\n");
 #ifdef NO_GEAR_POT
 				printf("Shift Lever below Downshift Exit Threshold\n");
@@ -910,7 +906,7 @@ static void run_downshift_sm(void)
 				begin_hold_clutch_tick = HAL_GetTick();
 
 #ifdef SHIFT_DEBUG
-				// Debug
+				//Debug
 				printf("=== Downshift State: HOLD_CLUTCH\n");
 				printf("How: Waiting for shift pot timed out\n");
 				printf("Current Tick: %lu\n", HAL_GetTick());
@@ -925,6 +921,7 @@ static void run_downshift_sm(void)
 
 			if (HAL_GetTick() - begin_enter_gear_tick > DOWNSHIFT_ENTER_GEAR_TIME_MS) {
 				next_downshift_state = ST_D_FINISH_SHIFT;
+				safe_spark_cut(false);
 
 #ifdef SHIFT_DEBUG
 				// Debug
@@ -938,15 +935,17 @@ static void run_downshift_sm(void)
 		}
 		break;
 
-	case ST_D_HOLD_CLUTCH:
+	case ST_D_HOLD_CLUTCH: // **********************************************
 		// some extra time to hold the clutch open. This is in the case that
 		// the shift lever does not hit the threshold and might needs some
 		// input from the driver to hit the right revs
-		set_clutch_solenoid(SOLENOID_ON); // TODO: Should this still happen in clutchless downshift? Double verify
+		// Should still happen in clutchless downshift because we only use
+		// mode to save air but would prefer not to fail shift
+		set_clutch_solenoid(SOLENOID_ON);
 		set_downshift_solenoid(SOLENOID_ON);
 		safe_spark_cut(false);
 
-		// check if we are done giving the extra time
+		// check if we are done giving the extra time TODO Make sure this gets tuned (currently long apparently)
 		if (HAL_GetTick() - begin_hold_clutch_tick > DOWNSHIFT_FAIL_EXTRA_CLUTCH_HOLD)
 		{
 			// done giving the extra clutch. Move on to finishing the shift
@@ -963,7 +962,7 @@ static void run_downshift_sm(void)
 		}
 		break;
 
-	case ST_D_FINISH_SHIFT:
+	case ST_D_FINISH_SHIFT: // **********************************************
 		// winding down the downshift. Make sure enough time has passed with
 		// the clutch open if we are using the clutch, otherwise end the shift
 		// but keep pushing on the shift solenoid for a little bit longer to

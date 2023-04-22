@@ -58,8 +58,8 @@ void safe_spark_cut(bool state)
 	// dont allow spark cut while entering or exiting neutral or if we are already
 	// below the minimum allowable RPM
 
-	if (tcm_data.target_gear == NEUTRAL || tcm_data.current_gear == NEUTRAL
-			|| tcm_data.current_RPM < MIN_SPARK_CUT_RPM)
+	if (!tcm_data.time_shift_only && (tcm_data.target_gear == NEUTRAL
+			|| tcm_data.current_gear == NEUTRAL || tcm_data.current_RPM < MIN_SPARK_CUT_RPM))
 	{
 		set_spark_cut(false);
 		return;
@@ -135,7 +135,6 @@ bool calc_validate_upshift(gear_t current_gear, U8 fast_clutch, U8 slow_clutch) 
 			// always allow shifts for now
 			//return validate_target_RPM();
 			return true;
-		// TODO: Check if this is worth it
 		case GEAR_0_5:
 		case GEAR_1_5:
 		case GEAR_2_5:
