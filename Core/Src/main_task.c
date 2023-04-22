@@ -924,7 +924,7 @@ static void run_downshift_sm(void)
 			// No spark cut without being confident in the trans speed
 
 			if (HAL_GetTick() - begin_enter_gear_tick > DOWNSHIFT_ENTER_GEAR_TIME_MS) {
-				downshift_state = ST_D_FINISH_SHIFT;
+				next_downshift_state = ST_D_FINISH_SHIFT;
 
 #ifdef SHIFT_DEBUG
 				// Debug
