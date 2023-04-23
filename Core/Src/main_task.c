@@ -298,26 +298,26 @@ static void shifting_task() {
 			if (calc_validate_upshift(tcm_data.current_gear, tcm_data.sw_fast_clutch, tcm_data.sw_slow_clutch))
 			{
 				main_state = ST_HDL_UPSHIFT;
-				next_upshift_state = ST_U_BEGIN_SHIFT;
+				upshift_state = ST_U_BEGIN_SHIFT;
 			}
 		} else if (tcm_data.pending_shift == DOWNSHIFT) {
 			if (calc_validate_downshift(tcm_data.current_gear, tcm_data.sw_fast_clutch, tcm_data.sw_slow_clutch))
 			{
 				main_state = ST_HDL_DOWNSHIFT;
-				next_downshift_state = ST_D_BEGIN_SHIFT;
+				downshift_state = ST_D_BEGIN_SHIFT;
 			}
 		}
 		tcm_data.pending_shift = NONE;
 		break;
 
 	case ST_HDL_UPSHIFT:
-		upshift_state = next_upshift_state; // Set state to next state variable per Sebastion's request
 		run_upshift_sm();
+		upshift_state = next_upshift_state; // Set state to next state variable per Sebastion's request
 		break;
 
 	case ST_HDL_DOWNSHIFT:
-		downshift_state = next_downshift_state;
 		run_downshift_sm();
+		downshift_state = next_downshift_state;
 		break;
 	}
 }
@@ -448,14 +448,10 @@ static void run_upshift_sm(void)
 		// engine. If all goes well, the gear should be left at that midpoint
 		set_upshift_solenoid(SOLENOID_ON);
 
-		// right now just leave spark cut on for this section of code instead
-		// of trying to actively rev match. Rev matching should be cutting
-		// spark anyway as we have not left the lower gear yet
-		//reach_target_RPM_spark_cut(tcm_data.target_RPM);
 		safe_spark_cut(true);
 
 		// check which shift mode we're in (to determine whether sensors
-		// assisted shifting should be used)
+		//  should be used)
 		if (!tcm_data.time_shift_only)
 		{
 #ifdef NO_GEAR_POT
@@ -656,23 +652,16 @@ static void run_upshift_sm(void)
 		break;
 
 	case ST_U_FINISH_SHIFT: // **********************************************
-		// wrapping up the upshift. First make sure we have been been cutting
-		// spark for long enough (to prevent a case where the shifter position
-		// is stuck in the success region from stopping shifting), then work
-		// on ending the shift while still pushing on the shift lever
+		// The shift is over, make sure we're no longer
+		// spark cutting and aren't using the clutch
 		set_upshift_solenoid(SOLENOID_ON);
 
-		// enough time has passed to finish the shift. Call the shift
-		// over but keep pushing as there is no downside other than the
-		// extra time the shift lever will take to return, preventing from
-		// starting another shift
 		safe_spark_cut(false);
 		tcm_data.using_clutch = false;
 
 #ifdef NO_GEAR_POT
-		// if the gear didn't correctly increase,
-		// declare unsuccessful. Only check if
-		// no gear pot because otherwise it would be updated every cycle.
+		// Only grab the current gear if we don't have a gear pot
+		// because if we have one its already updating every cycle
 		tcm_data.current_gear = get_current_gear();
 #endif
 
