@@ -164,7 +164,6 @@ bool calc_validate_downshift(gear_t current_gear, U8 fast_clutch, U8 slow_clutch
 	case GEAR_4:
 	case GEAR_5:
 		tcm_data.target_gear = current_gear - 2;
-		tcm_data.target_RPM = calc_target_RPM(tcm_data.target_gear);
 		// for now always allow downshifts, even if the target RPM is too high
 		//return validate_target_RPM();
 		return true;
@@ -174,7 +173,6 @@ bool calc_validate_downshift(gear_t current_gear, U8 fast_clutch, U8 slow_clutch
 	case GEAR_3_5:
 	case GEAR_4_5:
 		tcm_data.target_gear = current_gear - 1;
-		tcm_data.target_RPM = calc_target_RPM(tcm_data.target_gear);
 	case NEUTRAL:
 	case ERROR_GEAR:
 	default:
@@ -255,7 +253,7 @@ void set_downshift_solenoid(solenoid_position_t position)
 
 void set_spark_cut(bool state)
 {
-	HAL_GPIO_WritePin(SPK_CUT_GPIO_Port, SPK_CUT_Pin, state);
+	HAL_GPIO_WritePin(SPK_CUT_GPIO_Port, SPK_CUT_Pin, !state);
 }
 
 // get_ave_rpm

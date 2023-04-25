@@ -154,7 +154,7 @@ int main(void)
    );
 
   // Set initial output states to low because of strange behavior when this doesn't happen and pins go through the 3V3 to 5V converter.
-  HAL_GPIO_WritePin(SPK_CUT_GPIO_Port, SPK_CUT_Pin, 0);
+  HAL_GPIO_WritePin(SPK_CUT_GPIO_Port, SPK_CUT_Pin, 1);
   HAL_GPIO_WritePin(CLUTCH_SOL_GPIO_Port, CLUTCH_SOL_Pin, 0);
   HAL_GPIO_WritePin(SLOW_CLUTCH_SOL_GPIO_Port, SLOW_CLUTCH_SOL_Pin, 0);
   HAL_GPIO_WritePin(DOWNSHIFT_SOL_GPIO_Port, DOWNSHIFT_SOL_Pin, 0);
