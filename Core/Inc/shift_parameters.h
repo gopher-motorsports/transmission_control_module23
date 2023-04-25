@@ -8,6 +8,10 @@
 #ifndef INC_SHIFT_PARAMETERS_H_
 #define INC_SHIFT_PARAMETERS_H_
 
+//#define AUTO_SHIFT_LEVER_RETURN
+#define NO_GEAR_POT
+#define SHIFT_DEBUG
+
 // shifting defines for both upshift and downshift
 #define LEVER_NEUTRAL_POS_MM 37.0f
 #define LEVER_NEUTRAL_TOLERANCE 0.8

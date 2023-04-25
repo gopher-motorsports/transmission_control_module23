@@ -46,6 +46,16 @@ typedef struct tcm_data_struct
 
 typedef enum
 {
+	SENSE_OUT_OVERCURRENT_3V3 = 0,
+	SENSE_OUT_OVERCURRENT_5V,
+	SHIFT_POSITION_TIMEOUT,
+	CLUTCH_POSITION_TIMEOUT
+} tcm_errors_t;
+
+extern U16 error_led_on_times[];
+
+typedef enum
+{
 	SOLENOID_OFF,
 	SOLENOID_ON
 
@@ -66,6 +76,7 @@ bool validate_target_RPM(uint32_t target_rpm, gear_t target_gear, U8 fast_clutch
 bool calc_validate_upshift(gear_t current_gear, U8 fast_clutch, U8 slow_clutch);
 bool calc_validate_downshift(gear_t current_gear, U8 fast_clutch, U8 slow_clutch);
 
+void error(tcm_errors_t tcm_error, U8* error_store_location);
 void set_clutch_solenoid(solenoid_position_t position);
 void set_slow_clutch_drop(bool state);
 void set_upshift_solenoid(solenoid_position_t position);
@@ -74,5 +85,10 @@ void set_spark_cut(bool state);
 float get_gear_pot_pos(void);
 float get_clutch_pot_pos(void);
 float get_shift_pot_pos(void);
+
+// Temp no gear pot functions
+bool clutch_open(void);
+void update_rpm_arr(void);
+float get_ave_rpm(U32 ms_of_samples);
 
 #endif /* INC_UTILS_H_ */
