@@ -89,8 +89,6 @@ void Error_Handler(void);
 #define GSENSE_LED_GPIO_Port GPIOC
 #define AUX2_C_Pin GPIO_PIN_1
 #define AUX2_C_GPIO_Port GPIOB
-#define SPK_CUTB6_Pin GPIO_PIN_6
-#define SPK_CUTB6_GPIO_Port GPIOB
 #define FAULT_LED_Pin GPIO_PIN_9
 #define FAULT_LED_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
