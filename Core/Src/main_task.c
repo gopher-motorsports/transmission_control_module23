@@ -221,18 +221,18 @@ static void check_driver_inputs() {
 	tcm_data.sw_fast_clutch = FAST_CLUTCH_BUTTON;
 	tcm_data.sw_slow_clutch = SLOW_CLUTCH_BUTTON;
 
-	if((last_timeShiftOnly_button == 1) && (TIME_SHIFT_ONLY_BUTTON == 0)) {
+	if((last_timeShiftOnly_button == 0) && (TIME_SHIFT_ONLY_BUTTON == 1)) {
 		tcm_data.time_shift_only = !tcm_data.time_shift_only;
 	}
 	last_timeShiftOnly_button = TIME_SHIFT_ONLY_BUTTON;
 
-	if((last_clutchlessDownshift_button == 1) && (CLUTCHLESS_DOWNSHIFT_BUTTON == 0)) {
+	if((last_clutchlessDownshift_button == 0) && (CLUTCHLESS_DOWNSHIFT_BUTTON == 1)) {
 		tcm_data.clutchless_downshift = !tcm_data.clutchless_downshift;
 	}
 	last_clutchlessDownshift_button = CLUTCHLESS_DOWNSHIFT_BUTTON;
 
 	// Check button was released before trying shifting again - falling edge
-	if ((last_upshift_button == 1) && (UPSHIFT_BUTTON == 0)) {
+	if ((last_upshift_button == 0) && (UPSHIFT_BUTTON == 1)) {
 		if (tcm_data.pending_shift == DOWNSHIFT) {
 			tcm_data.pending_shift = NONE;
 		} else {
@@ -242,7 +242,7 @@ static void check_driver_inputs() {
 	last_upshift_button = UPSHIFT_BUTTON;
 
 	// Check button was released before trying shifting again - falling edge
-	if ((last_downshift_button == 1) && (DOWNSHIFT_BUTTON == 0)) {
+	if ((last_downshift_button == 0) && (DOWNSHIFT_BUTTON == 1)) {
 		if(tcm_data.pending_shift == UPSHIFT) {
 			tcm_data.pending_shift = NONE;
 		} else {
@@ -340,7 +340,7 @@ static void clutch_task() {
 	{
 		set_clutch_solenoid(SOLENOID_ON);
 		return;
-	} else if (main_state == ST_IDLE && tcm_data.anti_stall) {
+	} else if (main_state == ST_IDLE && !tcm_data.anti_stall) {
 		// If neither clutch button pressed and we are in IDLE and not in anti stall
 		// close clutch solenoid. This will cause clutch presses to latch to the end
 		// of a shift
