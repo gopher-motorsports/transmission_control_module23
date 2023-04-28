@@ -8,11 +8,11 @@
 #include "gopher_sense.h"
 
 #define FAST_CLUTCH_BUTTON (swFastClutch_state.data)
-#define SLOW_CLUTCH_BUTTON (swFastClutch_state.data)
-#define TIME_SHIFT_ONLY_BUTTON (swButon0_state.data)
-#define CLUTCHLESS_DOWNSHIFT_BUTTON (swButon1_state.data)
-#define UPSHIFT_BUTTON (swUpshift_state.data)
-#define DOWNSHIFT_BUTTON (swDownshift_state.data)
+#define SLOW_CLUTCH_BUTTON (swSlowClutch_state.data)
+#define TIME_SHIFT_ONLY_BUTTON (swButon2_state.data)
+#define CLUTCHLESS_DOWNSHIFT_BUTTON (swButon3_state.data)
+#define UPSHIFT_BUTTON (swButon1_state.data)
+#define DOWNSHIFT_BUTTON (swButon0_state.data)
 
 typedef enum
 {

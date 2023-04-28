@@ -51,3 +51,12 @@ buckets:
                 ADC: NON_ADC
                 sensor: NON_ADC
                 samples_buffered: 1
+            tcmClutchlessDownshift_state:
+                ADC: NON_ADC
+                sensor: NON_ADC
+                samples_buffered: 1
+            tcmTimeShiftOnly_state:
+                ADC: NON_ADC
+                sensor: NON_ADC
+                samples_buffered: 1
+            

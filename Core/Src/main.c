@@ -39,6 +39,7 @@
 /* USER CODE BEGIN PD */
 
 #define IC_TIMER &htim2
+#define HDMA_CHANNEL 1
 #define IC_CONVERSION_RATIO 2.0f //(X pulses / 1 sec) * (60 sec / 1 min) * (1 rev / 30 pulses) = RPM, so conversion ration would be 60/30 = 2.
 #define DMA_STOPPED_TIMEOUT_MS 60
 #define USE_VAR_SS true
@@ -144,6 +145,7 @@ int main(void)
   setup_pulse_sensor_vss(
 		  IC_TIMER,
  		  TIM_CHANNEL_1,
+		  HDMA_CHANNEL,
  		  IC_CONVERSION_RATIO,
  		  &(tcm_data.trans_speed),
 		  DMA_STOPPED_TIMEOUT_MS,
