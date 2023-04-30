@@ -25,7 +25,7 @@ CAN_HandleTypeDef* example_hcan;
 #define OVERCURRENT_FAULT_LED_TIME_MS 10000
 
 //#define AUTO_SHIFT_LEVER_RETURN
-#define SHIFT_DEBUG
+//#define SHIFT_DEBUG
 
 // some global variables for examples
 Main_States_t main_state = ST_IDLE;
@@ -377,6 +377,7 @@ static void run_upshift_sm(void)
 	static uint32_t begin_shift_tick;
 	static uint32_t begin_exit_gear_tick;
 	static uint32_t begin_enter_gear_tick;
+	static uint32_t begin_extra_push_tick;
 	static uint32_t begin_exit_gear_spark_return_tick;
 
 	// calculate the target RPM at the start of each cycle through the loop
@@ -591,8 +592,11 @@ static void run_upshift_sm(void)
 			if (tcm_data.current_gear == (initial_gear + 2))
 			{
 #endif
+
+				begin_extra_push_tick = HAL_GetTick();
+				next_upshift_state = ST_U_EXTRA_PUSH;
 				// shift position says we are done shifting
-				next_upshift_state = ST_U_FINISH_SHIFT;
+//				next_upshift_state = ST_U_FINISH_SHIFT;
 
 #ifdef SHIFT_DEBUG
 				// Debug
@@ -616,7 +620,9 @@ static void run_upshift_sm(void)
 				// at this point the shift was probably not successful. Note this so we
 				// dont increment the gears and move on
 				tcm_data.successful_shift = false;
-				next_upshift_state = ST_U_FINISH_SHIFT;
+				begin_extra_push_tick = HAL_GetTick();
+				next_upshift_state = ST_U_EXTRA_PUSH;
+//				next_upshift_state = ST_U_FINISH_SHIFT;
 
 #ifdef SHIFT_DEBUG
 				// Debug
@@ -637,7 +643,8 @@ static void run_upshift_sm(void)
 
 			if (HAL_GetTick() - begin_enter_gear_tick > UPSHIFT_ENTER_GEAR_TIME_MS)
 			{
-				next_upshift_state = ST_U_FINISH_SHIFT;
+				begin_extra_push_tick = HAL_GetTick();
+				next_upshift_state = ST_U_EXTRA_PUSH;
 
 #ifdef SHIFT_DEBUG
 				// Debug
@@ -648,6 +655,17 @@ static void run_upshift_sm(void)
 				lastShiftingChangeTick = HAL_GetTick();
 #endif
 			}
+		}
+		break;
+
+	case ST_U_EXTRA_PUSH:
+		safe_spark_cut(false);
+
+		set_upshift_solenoid(SOLENOID_ON);
+
+		if (HAL_GetTick() - begin_extra_push_tick > UPSHIFT_EXTRA_PUSH_TIME_MS)
+		{
+			next_upshift_state = ST_U_FINISH_SHIFT;
 		}
 		break;
 

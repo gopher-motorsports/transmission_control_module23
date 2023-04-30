@@ -145,14 +145,14 @@ int main(void)
   setup_pulse_sensor_vss(
 		  IC_TIMER,
  		  TIM_CHANNEL_1,
-		  HDMA_CHANNEL,
  		  IC_CONVERSION_RATIO,
  		  &(tcm_data.trans_speed),
 		  DMA_STOPPED_TIMEOUT_MS,
  		  USE_VAR_SS,
  		  IC_LOW_SAMPLES,
  		  IC_HIGH_SAMPLES,
-		  MIN_SAMPLES
+		  MIN_SAMPLES,
+		  64
    );
 
   // Set initial output states to low because of strange behavior when this doesn't happen and pins go through the 3V3 to 5V converter.
