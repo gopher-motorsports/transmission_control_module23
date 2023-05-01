@@ -48,6 +48,7 @@ typedef enum
 	ST_D_EXIT_GEAR,
 	ST_D_ENTER_GEAR,
 	ST_D_HOLD_CLUTCH,
+	ST_D_EXTRA_PUSH,
 	ST_D_FINISH_SHIFT
 } Downshift_States_t;
 

@@ -710,6 +710,7 @@ static void run_downshift_sm(void)
 	static uint32_t begin_shift_tick;
 	static uint32_t begin_exit_gear_tick;
 	static uint32_t begin_enter_gear_tick;
+	static uint32_t begin_extra_push_time_tick;
 	static uint32_t begin_hold_clutch_tick;
 
 	// calculate the target rpm at the start of each cycle
@@ -883,7 +884,8 @@ static void run_downshift_sm(void)
 				// the clutch lever has moved enough to finish the shift. Turn off
 				// any spark cutting and move on to finishing the shift
 				safe_spark_cut(false);
-				next_downshift_state = ST_D_FINISH_SHIFT;
+				begin_extra_push_time_tick = HAL_GetTick();
+				next_downshift_state = ST_D_EXTRA_PUSH;
 
 #ifdef SHIFT_DEBUG
 //				// Debug
@@ -927,7 +929,8 @@ static void run_downshift_sm(void)
 			// No spark cut without being confident in the trans speed
 
 			if (HAL_GetTick() - begin_enter_gear_tick > DOWNSHIFT_ENTER_GEAR_TIME_MS) {
-				next_downshift_state = ST_D_FINISH_SHIFT;
+				begin_extra_push_time_tick = HAL_GetTick();
+				next_downshift_state = ST_D_EXTRA_PUSH;
 				safe_spark_cut(false);
 
 #ifdef SHIFT_DEBUG
@@ -956,7 +959,8 @@ static void run_downshift_sm(void)
 		if (HAL_GetTick() - begin_hold_clutch_tick > DOWNSHIFT_FAIL_EXTRA_CLUTCH_HOLD)
 		{
 			// done giving the extra clutch. Move on to finishing the shift
-			next_downshift_state = ST_D_FINISH_SHIFT;
+			begin_extra_push_time_tick = HAL_GetTick();
+			next_downshift_state = ST_D_EXTRA_PUSH;
 
 #ifdef SHIFT_DEBUG
 			// Debug
@@ -966,6 +970,17 @@ static void run_downshift_sm(void)
 			printf("Distance from Last Occurrence: %lu //\n", HAL_GetTick() - lastShiftingChangeTick);
 			lastShiftingChangeTick = HAL_GetTick();
 #endif
+		}
+		break;
+
+	case ST_D_EXTRA_PUSH:
+		safe_spark_cut(false);
+
+		set_downshift_solenoid(SOLENOID_ON);
+
+		if (HAL_GetTick() - begin_extra_push_time_tick > DOWNSHIFT_EXTRA_PUSH_TIME_MS)
+		{
+			next_downshift_state = ST_D_FINISH_SHIFT;
 		}
 		break;
 

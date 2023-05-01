@@ -37,6 +37,7 @@
 #define DOWNSHIFT_FAIL_EXTRA_CLUTCH_HOLD 50 // some extra time is given in addition because the clutch takes some time to return to the bite point
 #define DOWNSHIFT_EXIT_POS_MM 34.0f
 #define DOWNSHIFT_ENTER_POS_MM 28.2f
+#define DOWNSHIFT_EXTRA_PUSH_TIME_MS 100
 
 // clutch defines
 #define CLUTCH_OPEN_POS_MM 27.0f
