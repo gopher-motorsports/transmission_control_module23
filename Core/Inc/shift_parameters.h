@@ -18,7 +18,7 @@
 #define TARGET_RPM_TOLERANCE 0.03f
 
 // upshift defines
-#define UPSHIFT_SHIFT_LEVER_PRELOAD_TIME_MS 60 // long preload to get lots of load on the shift lever
+#define UPSHIFT_SHIFT_LEVER_PRELOAD_TIME_MS 5// 60 // long preload to get lots of load on the shift lever
 #define UPSHIFT_EXIT_TIMEOUT_MS 25 // short time to exit. If the shift lever wasn't pushed far enough quickly it is probably stuck
 #define UPSHIFT_EXIT_SPARK_RETURN_MS 10 // we dont want the spark return to be too long
 #define UPSHIFT_ENTER_TIMEOUT_MS 30 // data shows this does not take very long, so have a pretty short timeout here.
@@ -31,7 +31,7 @@
 #define DOWNSHIFT_ENTER_GEAR_TIME_MS 60
 
 // downshift defines
-#define DOWNSHIFT_SHIFT_LEVER_PRELOAD_TIME_MS 20 // preloads seem to be less important for downshifts as exiting gear is almost always successful
+#define DOWNSHIFT_SHIFT_LEVER_PRELOAD_TIME_MS 5 //20 // preloads seem to be less important for downshifts as exiting gear is almost always successful
 #define DOWNSHIFT_EXIT_TIMEOUT_MS 30 // short time to exit. Data shows we can exit pretty easily
 #define DOWNSHIFT_ENTER_TIMEOUT_MS 75
 #define DOWNSHIFT_FAIL_EXTRA_CLUTCH_HOLD 50 // some extra time is given in addition because the clutch takes some time to return to the bite point
@@ -40,7 +40,7 @@
 #define DOWNSHIFT_EXTRA_PUSH_TIME_MS 100
 
 // clutch defines
-#define CLUTCH_OPEN_POS_MM 27.0f
+#define CLUTCH_OPEN_POS_MM 2.3f
 #define CLUTCH_SLOW_DROP_FAST_TO_SLOW_EXTRA_MM 3.0f
 #define CLUTCH_OPEN_TIMEOUT_MS 300
 
@@ -53,15 +53,15 @@
 
 // gear establishing and calculating defines
 #define DEFAULT_WHEEL_SPEED_AVE_TIME_ms 25
-#define GEAR_NOT_ESTABLISHED_NUM_SAMPLES_ms 50
-#define GEAR_ESTABLISHED_NUM_SAMPLES_ms RPM_ARRAY_SIZE
+#define GEAR_NOT_ESTABLISHED_NUM_SAMPLES_ms 5
+#define GEAR_ESTABLISHED_NUM_SAMPLES_ms 20
 #define GEAR_ESTABLISH_TOLERANCE_percent 0.03f
 #define NUM_OF_GEARS 5
-#define GEAR_1_WHEEL_RATIO 141.7f
-#define GEAR_2_WHEEL_RATIO 112.9f
-#define GEAR_3_WHEEL_RATIO 97.1f
-#define GEAR_4_WHEEL_RATIO 86.6f
-#define GEAR_5_WHEEL_RATIO 78.7f
+#define GEAR_1_TRANS_RATIO 4.62f
+#define GEAR_2_TRANS_RATIO 3.67f
+#define GEAR_3_TRANS_RATIO 3.21f
+#define GEAR_4_TRANS_RATIO 2.86f
+#define GEAR_5_TRANS_RATIO 2.60f
 
 #define GEAR_POS_MARGIN_mm 0.1
 #define NEUTRAL_DISTANCE_mm 0

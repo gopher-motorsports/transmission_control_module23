@@ -218,36 +218,46 @@ static float last_timeShiftOnly_button = 0;
 static float last_clutchlessDownshift_button = 0;
 
 static void check_driver_inputs() {
+
+	static U32 last_click_time_1 = 0;
+	static U32 last_click_time_2 = 0;
+	static U32 last_click_time_3 = 0;
+	static U32 last_click_time_4 = 0;
+
 	tcm_data.sw_fast_clutch = FAST_CLUTCH_BUTTON;
 	tcm_data.sw_slow_clutch = SLOW_CLUTCH_BUTTON;
 
-	if((last_timeShiftOnly_button == 0) && (TIME_SHIFT_ONLY_BUTTON == 1)) {
+	if((last_timeShiftOnly_button == 0) && (TIME_SHIFT_ONLY_BUTTON == 1) && ((HAL_GetTick() - last_click_time_1) > 100)) {
 		tcm_data.time_shift_only = !tcm_data.time_shift_only;
+		last_click_time_1 = HAL_GetTick();
 	}
 	last_timeShiftOnly_button = TIME_SHIFT_ONLY_BUTTON;
 
-	if((last_clutchlessDownshift_button == 0) && (CLUTCHLESS_DOWNSHIFT_BUTTON == 1)) {
+	if((last_clutchlessDownshift_button == 0) && (CLUTCHLESS_DOWNSHIFT_BUTTON == 1) && ((HAL_GetTick() - last_click_time_2) > 100)) {
 		tcm_data.clutchless_downshift = !tcm_data.clutchless_downshift;
+		last_click_time_2 = HAL_GetTick();
 	}
 	last_clutchlessDownshift_button = CLUTCHLESS_DOWNSHIFT_BUTTON;
 
 	// Check button was released before trying shifting again - falling edge
-	if ((last_upshift_button == 0) && (UPSHIFT_BUTTON == 1)) {
+	if ((last_upshift_button == 0) && (UPSHIFT_BUTTON == 1) && ((HAL_GetTick() - last_click_time_3) > 100)) {
 		if (tcm_data.pending_shift == DOWNSHIFT) {
 			tcm_data.pending_shift = NONE;
 		} else {
 			tcm_data.pending_shift = UPSHIFT;
 		}
+		last_click_time_3 = HAL_GetTick();
 	}
 	last_upshift_button = UPSHIFT_BUTTON;
 
 	// Check button was released before trying shifting again - falling edge
-	if ((last_downshift_button == 0) && (DOWNSHIFT_BUTTON == 1)) {
+	if ((last_downshift_button == 0) && (DOWNSHIFT_BUTTON == 1) && ((HAL_GetTick() - last_click_time_4) > 100)) {
 		if(tcm_data.pending_shift == UPSHIFT) {
 			tcm_data.pending_shift = NONE;
 		} else {
 			tcm_data.pending_shift = DOWNSHIFT;
 		}
+		last_click_time_4 = HAL_GetTick();
 	}
 	last_downshift_button = DOWNSHIFT_BUTTON;
 }
@@ -352,7 +362,7 @@ static void clutch_task() {
 		{
 			// TODO: Check if we want a way to make this not closed loop
 			// when slow dropping, we want to start by fast dropping until the bite point
-			if (get_clutch_pot_pos() < CLUTCH_OPEN_POS_MM - CLUTCH_SLOW_DROP_FAST_TO_SLOW_EXTRA_MM)
+			if (get_clutch_pot_pos() > CLUTCH_OPEN_POS_MM + CLUTCH_SLOW_DROP_FAST_TO_SLOW_EXTRA_MM)
 			{
 				set_slow_clutch_drop(false);
 			}
