@@ -10,11 +10,11 @@
 tcm_data_struct_t tcm_data = {.current_gear = ERROR_GEAR};
 
 const float gear_ratios[5] = {
-		GEAR_1_WHEEL_RATIO,
-		GEAR_2_WHEEL_RATIO,
-		GEAR_3_WHEEL_RATIO,
-		GEAR_4_WHEEL_RATIO,
-		GEAR_5_WHEEL_RATIO
+		GEAR_1_TRANS_RATIO,
+		GEAR_2_TRANS_RATIO,
+		GEAR_3_TRANS_RATIO,
+		GEAR_4_TRANS_RATIO,
+		GEAR_5_TRANS_RATIO
 };
 const float GEAR_POT_DISTANCES_mm[] = {
 		NEUTRAL_DISTANCE_mm,
@@ -30,6 +30,7 @@ uint32_t rpm_idx = 0;
 
 void update_tcm_data(void)
 {
+	update_rpm_arr();
 	tcm_data.current_RPM = get_ECU_RPM();
 }
 
@@ -206,7 +207,8 @@ bool validate_target_RPM(uint32_t target_rpm, gear_t target_gear, U8 fast_clutch
 	return true;
 }
 
-// update_rpm_arr
+//
+
 //  Continuously add values to the RPM array whenever the clutch is not open
 void update_rpm_arr(void)
 {
@@ -300,16 +302,19 @@ float temp1, temp2;
 //  RPM to the wheels. If a gear has been established, it is unlikely that we
 //  changed gears so use more samples and take the closest based on the ratio.
 //  If the gear is not established then the gear ratios must be closer to the gear
+
+float minimum_rpm_difference = 15000.0f;
+float temp_diff;
+float trans_speed;
+float ave_rpm;
+float theoredical_rpm;
+uint8_t best_gear = 0;
+
 gear_t get_current_gear()
 {
 #ifdef NO_GEAR_POT
-	float minimum_rpm_difference = 15000.0f;
-	float temp_diff;
-	float trans_speed;
-	float ave_rpm;
-	float theoredical_rpm;
-	uint8_t best_gear = 0;
 
+	minimum_rpm_difference = 15000.0f;
 	// If we are currently shifting just use the last know gear
 	if (main_state == ST_HDL_UPSHIFT || main_state == ST_HDL_DOWNSHIFT)
 	{
@@ -321,7 +326,7 @@ gear_t get_current_gear()
 	// if the clutch is open return the last gear (shifting updates the current gear
 	// on a success so you should still be able to reasonably go up and down)
 	// same if we are not moving. We have no data in order to change the gear
-	if (clutch_open() || !tcm_data.currently_moving)
+	if (clutch_open()) //|| !tcm_data.currently_moving)
 	{
 		// no change to established gear, if we were good before we are still good
 		// and vice versa
@@ -341,7 +346,7 @@ gear_t get_current_gear()
 			if (temp_diff < minimum_rpm_difference)
 			{
 				minimum_rpm_difference = temp_diff;
-				best_gear = c;
+				best_gear = c + 1;
 			}
 		}
 
@@ -361,7 +366,7 @@ gear_t get_current_gear()
 			if (temp_diff < minimum_rpm_difference)
 			{
 				minimum_rpm_difference = temp_diff;
-				best_gear = c;
+				best_gear = c + 1;
 			}
 		}
 
@@ -424,7 +429,7 @@ U32 get_ECU_RPM()
 
 bool clutch_open(void)
 {
-	return get_clutch_pot_pos() < CLUTCH_OPEN_POS_MM;
+	return get_clutch_pot_pos() > CLUTCH_OPEN_POS_MM;
 }
 
 // Functions currently only used for debugging

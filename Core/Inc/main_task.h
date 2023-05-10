@@ -1,14 +1,14 @@
 // GopherCAN_devboard_example.h
 //  Header file for GopherCAN_devboard_example.c
 
-#ifndef GOPHERCAN_DEVBOARD_EXAMPLE_H
-#define GOPHERCAN_DEVBOARD_EXAMPLE_H
+#ifndef MAIN_TASK_H_1
+#define MAIN_TASK_H_1
 
 #include "GopherCAN.h"
 #include "gopher_sense.h"
 
-#define FAST_CLUTCH_BUTTON (swSlowClutch_state.data)
-#define SLOW_CLUTCH_BUTTON (swFastClutch_state.data)
+#define FAST_CLUTCH_BUTTON (swFastClutch_state.data)
+#define SLOW_CLUTCH_BUTTON (swSlowClutch_state.data)
 #define TIME_SHIFT_ONLY_BUTTON (swButon2_state.data)
 #define CLUTCHLESS_DOWNSHIFT_BUTTON (swButon3_state.data)
 #define UPSHIFT_BUTTON (swUpshift_state.data)
