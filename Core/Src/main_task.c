@@ -90,7 +90,7 @@ void init(CAN_HandleTypeDef* hcan_ptr)
 
 	initialization_start_time_ms = HAL_GetTick();
 
-	// TESTING
+	// Lock param sending for everything - uncomment for stress testing CAN
 //	lock_param_sending(&counterShaftSpeed_rpm.info);
 //	lock_param_sending(&tcmTargetRPM_rpm.info);
 //	lock_param_sending(&tcmCurrentGear_state.info);
@@ -99,8 +99,11 @@ void init(CAN_HandleTypeDef* hcan_ptr)
 //	lock_param_sending(&tcmError_state.info);
 //	lock_param_sending(&tcmUsingClutch_state.info);
 //	lock_param_sending(&tcmUsingClutch_state.info);
+
 	lock_param_sending(&tcmTimeShiftOnly_state.info);
+#ifdef CAN_CLUTCHLESS_DOWNSHIFT
 	lock_param_sending(&tcmClutchlessDownshift_state.info);
+#endif
 }
 
 
