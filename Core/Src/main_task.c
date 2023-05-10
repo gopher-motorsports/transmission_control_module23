@@ -8,9 +8,11 @@
 #include "pulse_sensor.h"
 #include "utils.h"
 #include <stdio.h>
+#include <stdbool.h>
 #include "shift_parameters.h"
 #include <string.h>
 #include <stdbool.h>
+#include <cmsis_os.h>
 
 // the HAL_CAN struct. This example only works for a single CAN bus
 CAN_HandleTypeDef* example_hcan;
@@ -25,6 +27,7 @@ CAN_HandleTypeDef* example_hcan;
 #define OVERCURRENT_FAULT_LED_TIME_MS 10000
 
 //#define AUTO_SHIFT_LEVER_RETURN
+//#define CAN_CLUTCHLESS_DOWNSHIFT
 //#define SHIFT_DEBUG
 
 // some global variables for examples
@@ -32,8 +35,10 @@ Main_States_t main_state = ST_IDLE;
 
 static Upshift_States_t upshift_state, next_upshift_state;
 static Downshift_States_t downshift_state, next_downshift_state;
+U32 initialization_start_time_ms = 0;
 U8 last_button_state = 0;
 U8 error_byte = 0;
+bool initial_input_skip = true;
 
 #ifdef SHIFT_DEBUG
 // All upper shifting debug statements
@@ -82,6 +87,20 @@ void init(CAN_HandleTypeDef* hcan_ptr)
 	{
 		init_error();
 	}
+
+	initialization_start_time_ms = HAL_GetTick();
+
+	// TESTING
+//	lock_param_sending(&counterShaftSpeed_rpm.info);
+//	lock_param_sending(&tcmTargetRPM_rpm.info);
+//	lock_param_sending(&tcmCurrentGear_state.info);
+//	lock_param_sending(&tcmCurrentlyMoving_state.info);
+//	lock_param_sending(&tcmAntiStallActive_state.info);
+//	lock_param_sending(&tcmError_state.info);
+//	lock_param_sending(&tcmUsingClutch_state.info);
+//	lock_param_sending(&tcmUsingClutch_state.info);
+	lock_param_sending(&tcmTimeShiftOnly_state.info);
+	lock_param_sending(&tcmClutchlessDownshift_state.info);
 }
 
 
@@ -109,6 +128,17 @@ void main_loop()
 	static U32 lastPrintHB = 0;
 	static uint32_t last_gear_update = 0;
 
+	static char taskBuffer[250];
+	static uint32_t lastTaskUtilizationUpdate = 0;
+	if (HAL_GetTick() -  lastTaskUtilizationUpdate > 1000)
+	{
+		lastTaskUtilizationUpdate = HAL_GetTick();
+
+		// TESTING: Get runtime stats
+//		vTaskGetRunTimeStats(taskBuffer);
+//		printf("%s\n", taskBuffer);
+	}
+
 	if (HAL_GetTick() - lastHeartbeat > HEARTBEAT_MS_BETWEEN)
 	{
 		lastHeartbeat = HAL_GetTick();
@@ -129,7 +159,13 @@ void main_loop()
 	update_tcm_data();
 	checkForErrors();
 	updateAndQueueParams();
-	check_driver_inputs();
+
+	if (!initial_input_skip) {
+		check_driver_inputs();
+	} else if (HAL_GetTick() - initialization_start_time_ms > 100) {
+		initial_input_skip = false;
+	}
+
 	shifting_task();
 	clutch_task();
 
@@ -218,46 +254,38 @@ static float last_timeShiftOnly_button = 0;
 static float last_clutchlessDownshift_button = 0;
 
 static void check_driver_inputs() {
-
-	static U32 last_click_time_1 = 0;
-	static U32 last_click_time_2 = 0;
-	static U32 last_click_time_3 = 0;
-	static U32 last_click_time_4 = 0;
-
 	tcm_data.sw_fast_clutch = FAST_CLUTCH_BUTTON;
 	tcm_data.sw_slow_clutch = SLOW_CLUTCH_BUTTON;
 
-	if((last_timeShiftOnly_button == 0) && (TIME_SHIFT_ONLY_BUTTON == 1) && ((HAL_GetTick() - last_click_time_1) > 100)) {
+	if((last_timeShiftOnly_button == 0) && (TIME_SHIFT_ONLY_BUTTON == 1)) {
 		tcm_data.time_shift_only = !tcm_data.time_shift_only;
-		last_click_time_1 = HAL_GetTick();
 	}
 	last_timeShiftOnly_button = TIME_SHIFT_ONLY_BUTTON;
 
-	if((last_clutchlessDownshift_button == 0) && (CLUTCHLESS_DOWNSHIFT_BUTTON == 1) && ((HAL_GetTick() - last_click_time_2) > 100)) {
+#ifdef CAN_CLUTCHLESS_DOWNSHIFT
+	if((last_clutchlessDownshift_button == 0) && (CLUTCHLESS_DOWNSHIFT_BUTTON == 1)) {
 		tcm_data.clutchless_downshift = !tcm_data.clutchless_downshift;
-		last_click_time_2 = HAL_GetTick();
 	}
 	last_clutchlessDownshift_button = CLUTCHLESS_DOWNSHIFT_BUTTON;
+#endif
 
 	// Check button was released before trying shifting again - falling edge
-	if ((last_upshift_button == 0) && (UPSHIFT_BUTTON == 1) && ((HAL_GetTick() - last_click_time_3) > 100)) {
+	if ((last_upshift_button == 0) && (UPSHIFT_BUTTON == 1)) {
 		if (tcm_data.pending_shift == DOWNSHIFT) {
 			tcm_data.pending_shift = NONE;
 		} else {
 			tcm_data.pending_shift = UPSHIFT;
 		}
-		last_click_time_3 = HAL_GetTick();
 	}
 	last_upshift_button = UPSHIFT_BUTTON;
 
 	// Check button was released before trying shifting again - falling edge
-	if ((last_downshift_button == 0) && (DOWNSHIFT_BUTTON == 1) && ((HAL_GetTick() - last_click_time_4) > 100)) {
+	if ((last_downshift_button == 0) && (DOWNSHIFT_BUTTON == 1)) {
 		if(tcm_data.pending_shift == UPSHIFT) {
 			tcm_data.pending_shift = NONE;
 		} else {
 			tcm_data.pending_shift = DOWNSHIFT;
 		}
-		last_click_time_4 = HAL_GetTick();
 	}
 	last_downshift_button = DOWNSHIFT_BUTTON;
 }
