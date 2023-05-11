@@ -28,6 +28,7 @@ CAN_HandleTypeDef* example_hcan;
 
 //#define AUTO_SHIFT_LEVER_RETURN
 //#define CAN_CLUTCHLESS_DOWNSHIFT
+#define CAN_CHANGE_FROM_TIME_SHIFT
 //#define SHIFT_DEBUG
 
 // some global variables for examples
@@ -104,6 +105,8 @@ void init(CAN_HandleTypeDef* hcan_ptr)
 #ifdef CAN_CLUTCHLESS_DOWNSHIFT
 	lock_param_sending(&tcmClutchlessDownshift_state.info);
 #endif
+
+	tcm_data.time_shift_only = true;
 }
 
 
@@ -165,7 +168,7 @@ void main_loop()
 
 	if (!initial_input_skip) {
 		check_driver_inputs();
-	} else if (HAL_GetTick() - initialization_start_time_ms > 100) {
+	} else if (HAL_GetTick() - initialization_start_time_ms > 2000) {
 		initial_input_skip = false;
 	}
 
@@ -260,10 +263,12 @@ static void check_driver_inputs() {
 	tcm_data.sw_fast_clutch = FAST_CLUTCH_BUTTON;
 	tcm_data.sw_slow_clutch = SLOW_CLUTCH_BUTTON;
 
+#ifdef CAN_CHANGE_FROM_TIME_SHIFT
 	if((last_timeShiftOnly_button == 0) && (TIME_SHIFT_ONLY_BUTTON == 1)) {
 		tcm_data.time_shift_only = !tcm_data.time_shift_only;
 	}
 	last_timeShiftOnly_button = TIME_SHIFT_ONLY_BUTTON;
+#endif
 
 #ifdef CAN_CLUTCHLESS_DOWNSHIFT
 	if((last_clutchlessDownshift_button == 0) && (CLUTCHLESS_DOWNSHIFT_BUTTON == 1)) {
