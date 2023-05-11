@@ -156,6 +156,7 @@ int main(void)
   init(&hcan1);
   gsense_init(&hcan1, &hadc1, NULL/*&hadc2*/, NULL, &htim10, GSENSE_LED_GPIO_Port, GSENSE_LED_Pin);
 
+#ifndef TEST_RPM_INPUT
   setup_pulse_sensor_vss(
 		  IC_TIMER,
  		  TIM_CHANNEL_1,
@@ -168,6 +169,7 @@ int main(void)
 		  MIN_SAMPLES,
 		  64
    );
+#endif
 
   // Set initial output states to low because of strange behavior when this doesn't happen and pins go through the 3V3 to 5V converter.
   HAL_GPIO_WritePin(SPK_CUT_GPIO_Port, SPK_CUT_Pin, 1);

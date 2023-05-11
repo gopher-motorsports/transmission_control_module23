@@ -44,6 +44,12 @@ buckets:
                 ADC: NON_ADC
                 sensor: NON_ADC
                 samples_buffered: 1
+                samples_buffered: 1
+            #TESTING ONLY
+            engineRPM_rpm:
+                ADC: NON_ADC
+                sensor: NON_ADC
+                samples_buffered: 1
     very_low_frequency_tcm:
         frequency_hz: 10
         parameters:
@@ -59,4 +65,11 @@ buckets:
                 ADC: NON_ADC
                 sensor: NON_ADC
                 samples_buffered: 1
+            shiftTestingAdjustmentMode_state:
+                ADC: NON_ADC
+                sensor: NON_ADC
+                samples_buffered: 1
+            shiftTestingAdjustmentValue_ul:
+                ADC: NON_ADC
+                sensor: NON_ADC
             

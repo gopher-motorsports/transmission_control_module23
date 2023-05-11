@@ -17,20 +17,6 @@
 // the HAL_CAN struct. This example only works for a single CAN bus
 CAN_HandleTypeDef* example_hcan;
 
-// Use this to define what module this board will be
-#define THIS_MODULE_ID TCM_ID
-#define PRINTF_HB_MS_BETWEEN 1000
-#define HEARTBEAT_MS_BETWEEN 500
-#define TCM_DATA_UPDATE_MS_BETWEEN 10
-
-// Fault LED times
-#define OVERCURRENT_FAULT_LED_TIME_MS 10000
-
-//#define AUTO_SHIFT_LEVER_RETURN
-//#define CAN_CLUTCHLESS_DOWNSHIFT
-#define CAN_CHANGE_FROM_TIME_SHIFT
-//#define SHIFT_DEBUG
-
 // some global variables for examples
 Main_States_t main_state = ST_IDLE;
 
@@ -41,10 +27,21 @@ U8 last_button_state = 0;
 U8 error_byte = 0;
 bool initial_input_skip = true;
 
+// SHIFT TESTING
+U16 auto_shift_rpm = 0;
+U16 upshift_preload_time = 0;
+U16 downshift_preload_time = 0;
+U16 sent_adjustment_value = 0;
+
 #ifdef SHIFT_DEBUG
 // All upper shifting debug statements
 static U32 lastShiftingChangeTick = 0;
 #endif
+
+#ifdef TEST_RPM_INPUT
+U16 engineRPM = 9000;
+#endif
+
 // Array for the amount of time each error should latch the
 U16 error_led_on_times[] = {
 	OVERCURRENT_FAULT_LED_TIME_MS, // SENSE_OUT_OVERCURRENT_3V3
@@ -107,6 +104,7 @@ void init(CAN_HandleTypeDef* hcan_ptr)
 #endif
 
 	tcm_data.time_shift_only = true;
+	tcm_data.trans_speed = 9000;
 }
 
 
@@ -132,6 +130,9 @@ void main_loop()
 {
 	static U32 lastHeartbeat = 0;
 	static U32 lastPrintHB = 0;
+#ifdef TEST_RPM_INPUT
+	static U32 lastRPMIncreaseTimeMS = 0;
+#endif
 	static uint32_t last_gear_update = 0;
 
 	static char taskBuffer[250];
@@ -161,7 +162,16 @@ void main_loop()
 	tcm_data.current_gear = get_current_gear();
 #endif
 
+#ifndef TEST_RPM_INPUT
 	check_pulse_sensors();
+#else
+	if (HAL_GetTick() - lastRPMIncreaseTimeMS >= 1000)
+	{
+		engineRPM = ((engineRPM - 9000 + 1000) % 5000) + 9000;
+		lastRPMIncreaseTimeMS = HAL_GetTick();
+	}
+#endif
+
 	update_tcm_data();
 	checkForErrors();
 	updateAndQueueParams();
@@ -184,7 +194,7 @@ void main_loop()
 
 	// Clear the error byte, so it has to keep being triggered if the error is persistent (and doesn't require a function to turn it off again)
 	error_byte = 0;
-}
+	}
 
 static void checkForErrors(void) {
 	static U32 led_on_start_time = 0;
@@ -232,7 +242,11 @@ static void updateAndQueueParams(void) {
 	update_and_queue_param_u8(&tcmUsingClutch_state, tcm_data.using_clutch);
 	update_and_queue_param_u8(&tcmTimeShiftOnly_state, tcm_data.time_shift_only);
 	update_and_queue_param_u8(&tcmClutchlessDownshift_state, tcm_data.clutchless_downshift);
+	update_and_queue_param_u8(&shiftTestingAdjustmentMode_state, tcm_data.shift_test_mode);
 	update_and_queue_param_u8(&tcmError_state, error_byte);
+#ifdef TEST_RPM_INPUT
+	update_and_queue_param_u16(&engineRPM_rpm, engineRPM);
+#endif
 
 	switch (main_state)
 	{
@@ -252,12 +266,18 @@ static void updateAndQueueParams(void) {
 		update_and_queue_param_u8(&tcmShiftState_state, downshift_state);
 		break;
 	}
+
+
 }
 
 static float last_upshift_button = 0;
 static float last_downshift_button = 0;
 static float last_timeShiftOnly_button = 0;
+static float last_dial_num = 0;
+#ifdef CAN_CLUTCHLESS_DOWNSHIFT
 static float last_clutchlessDownshift_button = 0;
+#endif
+static float last_shiftTestMode_button = 0;
 
 static void check_driver_inputs() {
 	tcm_data.sw_fast_clutch = FAST_CLUTCH_BUTTON;
@@ -277,8 +297,66 @@ static void check_driver_inputs() {
 	last_clutchlessDownshift_button = CLUTCHLESS_DOWNSHIFT_BUTTON;
 #endif
 
+	// SHIFT TESTING
+	if((last_shiftTestMode_button == 0) && (ADJUSTMENT_MODE_CHANGE_BUTTON == 1)) {
+		tcm_data.shift_test_mode = (tcm_data.shift_test_mode + 1) % NUM_SHIFT_TEST_MODES;
+	}
+	last_shiftTestMode_button = ADJUSTMENT_MODE_CHANGE_BUTTON;
+
+	switch (tcm_data.shift_test_mode) {
+		case AUTO_SHIFT_RPM:
+			//auto_shift_rpm = swDial_ul.data * 500 + 9000;
+
+			if (swDial_ul.data > last_dial_num) {
+				if(auto_shift_rpm < 13000) {
+					auto_shift_rpm += 1000;
+				}
+
+				last_dial_num = swDial_ul.data;
+			} else if (swDial_ul.data < last_dial_num) {
+				if(auto_shift_rpm > 10000) {
+					auto_shift_rpm -= 1000;
+				}
+
+				last_dial_num = swDial_ul.data;
+			}
+
+//			switch(swDial_ul.data) {
+//				case 12:
+//					auto_shift_rpm = 10000;
+//					break;
+//				case 13:
+//					auto_shift_rpm = 11000;
+//					break;
+//				case 14:
+//					auto_shift_rpm = 12000;
+//					break;
+//				case 15:
+//					auto_shift_rpm = 13000;
+//					break;
+//				default:
+//					auto_shift_rpm = 0;
+//					break;
+//			}
+			update_and_queue_param_u16(&shiftTestingAdjustmentValue_ul, auto_shift_rpm);
+			break;
+		case UPSHIFT_PRELOAD:
+			upshift_preload_time = swDial_ul.data * 5;
+			update_and_queue_param_u16(&shiftTestingAdjustmentValue_ul, upshift_preload_time);
+			break;
+		case DOWNSHIFT_PRELOAD:
+			upshift_preload_time = swDial_ul.data * 500 + 9000;
+			update_and_queue_param_u16(&shiftTestingAdjustmentValue_ul, upshift_preload_time);
+			break;
+	}
+
 	// Check button was released before trying shifting again - falling edge
-	if ((last_upshift_button == 0) && (UPSHIFT_BUTTON == 1)) {
+	if (((last_upshift_button == 0) && (UPSHIFT_BUTTON == 1))
+//#ifdef RPM_AUTO_SHIFT
+			|| ((auto_shift_rpm != 0) && (tcm_data.trans_speed > auto_shift_rpm))) {
+//#else
+//	){
+//#endif
 		if (tcm_data.pending_shift == DOWNSHIFT) {
 			tcm_data.pending_shift = NONE;
 		} else {
@@ -299,6 +377,10 @@ static void check_driver_inputs() {
 }
 
 static void shifting_task() {
+	static U32 last_auto_upshift_time_ms = 0;
+	static U32 last_time_above_desired_rpm = 0;
+	static bool was_waiting_to_auto_shift = false;
+
 	switch (main_state)
 	{
 	case ST_IDLE:
@@ -353,6 +435,26 @@ static void shifting_task() {
 				downshift_state = ST_D_BEGIN_SHIFT;
 			}
 		}
+
+#ifdef AUTO_SHIFT_RPM
+		if ((tcm_data.pending_shift == NONE) && (HAL_GetTick() - last_auto_upshift_time_ms > AUTO_RPM_UPSHIFT_COOLDOWN_TIME_MS)) {
+			if((auto_shift_rpm != 0) && (tcm_data.trans_speed >= auto_shift_rpm)) {
+				if (!was_waiting_to_auto_shift) {
+					was_waiting_to_auto_shift = true;
+					last_time_above_desired_rpm = HAL_GetTick();
+				}
+				if (HAL_GetTick() - last_time_above_desired_rpm > TIME_AT_DESIRED_RPM_MS) {
+					tcm_data.pending_shift = UPSHIFT;
+					break;
+				}
+			} else {
+				was_waiting_to_auto_shift = false;
+			}
+		} else {
+			was_waiting_to_auto_shift = false;
+		}
+#endif
+
 		tcm_data.pending_shift = NONE;
 		break;
 
@@ -467,7 +569,7 @@ static void run_upshift_sm(void)
 		safe_spark_cut(false);
 
 		// wait for the preload time to be over
-		if (HAL_GetTick() - begin_shift_tick > UPSHIFT_SHIFT_LEVER_PRELOAD_TIME_MS)
+		if (HAL_GetTick() - begin_shift_tick > upshift_preload_time)
 		{
 			// preload time is over. Start spark cutting to disengage the
 			// gears and moving the RPM to match up with the next gearS
@@ -807,7 +909,7 @@ static void run_downshift_sm(void)
 		// less about timing their blips perfectly because the TCM will do it
 		safe_spark_cut(true);
 
-		if ((HAL_GetTick() - begin_shift_tick > DOWNSHIFT_SHIFT_LEVER_PRELOAD_TIME_MS))
+		if ((HAL_GetTick() - begin_shift_tick > downshift_preload_time))
 		{
 			// done with preloading. Start allowing blips and move on to trying
 			// to exit the gear
