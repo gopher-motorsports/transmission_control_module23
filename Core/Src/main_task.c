@@ -133,18 +133,19 @@ void main_loop()
 #ifdef TEST_RPM_INPUT
 	static U32 lastRPMIncreaseTimeMS = 0;
 #endif
+#ifdef NO_GEAR_POT
 	static uint32_t last_gear_update = 0;
-
-#ifdef RUNTIME_STATS
-	static char taskBuffer[250];
 #endif
 
+#ifdef RUN_TIME_STATS
+	static char taskBuffer[250];
+#endif
 	static uint32_t lastTaskUtilizationUpdate = 0;
 	if (HAL_GetTick() -  lastTaskUtilizationUpdate > 1000)
 	{
 		lastTaskUtilizationUpdate = HAL_GetTick();
 
-#ifdef RUNTIME_STATS
+#ifdef RUN_TIME_STATS
 		// TESTING: Get runtime stats
 		vTaskGetRunTimeStats(taskBuffer);
 		printf("%s\n", taskBuffer);
@@ -289,7 +290,10 @@ static void updateAndQueueParams(void) {
 
 static float last_upshift_button = 0;
 static float last_downshift_button = 0;
+
+#ifdef CAN_CHANGE_FROM_TIME_SHIFT
 static float last_timeShiftOnly_button = 0;
+#endif
 static float last_dial_num = 0;
 static U32 last_dial_change_time = 0;
 S8 dial_movement = 0;
