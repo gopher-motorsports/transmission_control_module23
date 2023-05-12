@@ -395,8 +395,8 @@ gear_t get_current_gear()
 	// distance minus the margin (0.1mm)
 	float gear_position = get_gear_pot_pos();
 	for(int i = 0; i < NUM_GEARS / 2; i++) {
-		if (gear_position <= GEAR_POT_DISTANCES_mm[i] + GEAR_POS_MARGIN_mm) {
-			if (gear_position <= GEAR_POT_DISTANCES_mm[i] - GEAR_POS_MARGIN_mm) {
+		if (gear_position >= GEAR_POT_DISTANCES_mm[i] - GEAR_POS_MARGIN_mm) {
+			if (gear_position >= GEAR_POT_DISTANCES_mm[i] + GEAR_POS_MARGIN_mm) {
 				return (gear_t)(i * 2 - 1);
 			}
 			return (gear_t)(i * 2);

@@ -17,20 +17,6 @@
 // the HAL_CAN struct. This example only works for a single CAN bus
 CAN_HandleTypeDef* example_hcan;
 
-// Use this to define what module this board will be
-#define THIS_MODULE_ID TCM_ID
-#define PRINTF_HB_MS_BETWEEN 1000
-#define HEARTBEAT_MS_BETWEEN 500
-#define TCM_DATA_UPDATE_MS_BETWEEN 10
-
-// Fault LED times
-#define OVERCURRENT_FAULT_LED_TIME_MS 10000
-
-//#define AUTO_SHIFT_LEVER_RETURN
-//#define CAN_CLUTCHLESS_DOWNSHIFT
-#define CAN_CHANGE_FROM_TIME_SHIFT
-//#define SHIFT_DEBUG
-
 // some global variables for examples
 Main_States_t main_state = ST_IDLE;
 
@@ -132,17 +118,23 @@ void main_loop()
 {
 	static U32 lastHeartbeat = 0;
 	static U32 lastPrintHB = 0;
+#ifdef NO_GEAR_POT
 	static uint32_t last_gear_update = 0;
+#endif
 
+#ifdef RUN_TIME_STATS
 	static char taskBuffer[250];
+#endif
 	static uint32_t lastTaskUtilizationUpdate = 0;
 	if (HAL_GetTick() -  lastTaskUtilizationUpdate > 1000)
 	{
 		lastTaskUtilizationUpdate = HAL_GetTick();
 
+#ifdef RUN_TIME_STATS
 		// TESTING: Get runtime stats
-//		vTaskGetRunTimeStats(taskBuffer);
-//		printf("%s\n", taskBuffer);
+		vTaskGetRunTimeStats(taskBuffer);
+		printf("%s\n", taskBuffer);
+#endif
 	}
 
 	if (HAL_GetTick() - lastHeartbeat > HEARTBEAT_MS_BETWEEN)
@@ -256,8 +248,14 @@ static void updateAndQueueParams(void) {
 
 static float last_upshift_button = 0;
 static float last_downshift_button = 0;
+
+#ifdef CAN_CHANGE_FROM_TIME_SHIFT
 static float last_timeShiftOnly_button = 0;
+#endif
+
+#ifdef CAN_CLUTCHLESS_DOWNSHIFT
 static float last_clutchlessDownshift_button = 0;
+#endif
 
 static void check_driver_inputs() {
 	tcm_data.sw_fast_clutch = FAST_CLUTCH_BUTTON;

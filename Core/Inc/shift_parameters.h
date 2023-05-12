@@ -8,10 +8,6 @@
 #ifndef INC_SHIFT_PARAMETERS_H_
 #define INC_SHIFT_PARAMETERS_H_
 
-//#define AUTO_SHIFT_LEVER_RETURN
-#define NO_GEAR_POT
-//#define SHIFT_DEBUG
-
 // shifting defines for both upshift and downshift
 #define LEVER_NEUTRAL_POS_MM 37.0f
 #define LEVER_NEUTRAL_TOLERANCE 0.8
@@ -63,13 +59,13 @@
 #define GEAR_4_TRANS_RATIO 2.86f
 #define GEAR_5_TRANS_RATIO 2.60f
 
-#define GEAR_POS_MARGIN_mm 0.1
-#define NEUTRAL_DISTANCE_mm 0
-#define GEAR_1_DISTANCE_mm 1
-#define GEAR_2_DISTANCE_mm 2
-#define GEAR_3_DISTANCE_mm 3
-#define GEAR_4_DISTANCE_mm 4
-#define GEAR_5_DISTANCE_mm 5
+#define GEAR_POS_MARGIN_mm 0.05
+#define NEUTRAL_DISTANCE_mm 2.612	// 2.601 for down
+#define GEAR_1_DISTANCE_mm 2.505	// 2.484 for down
+#define GEAR_2_DISTANCE_mm 2.289	// 2.272 for down
+#define GEAR_3_DISTANCE_mm 1.963	// 1.938 for down
+#define GEAR_4_DISTANCE_mm 1.645	// 1.644 for down
+#define GEAR_5_DISTANCE_mm 1.270 	// 1.305 for down
 
 // RPM cutoffs
 #define MAX_RPM 14000
