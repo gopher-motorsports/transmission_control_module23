@@ -44,8 +44,6 @@ buckets:
                 ADC: NON_ADC
                 sensor: NON_ADC
                 samples_buffered: 1
-                samples_buffered: 1
-            #TESTING ONLY
             engineRPM_rpm:
                 ADC: NON_ADC
                 sensor: NON_ADC
@@ -72,4 +70,4 @@ buckets:
             shiftTestingAdjustmentValue_ul:
                 ADC: NON_ADC
                 sensor: NON_ADC
-            
+                samples_buffered: 1

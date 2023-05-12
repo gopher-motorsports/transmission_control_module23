@@ -28,9 +28,9 @@ U8 error_byte = 0;
 bool initial_input_skip = true;
 
 // SHIFT TESTING
-U16 auto_shift_rpm = 0;
-U16 upshift_preload_time = 0;
-U16 downshift_preload_time = 0;
+U16 auto_shift_rpm = 10000;
+U16 upshift_preload_time = 50;
+U16 downshift_preload_time = 20;
 U16 sent_adjustment_value = 0;
 
 #ifdef SHIFT_DEBUG
@@ -135,15 +135,20 @@ void main_loop()
 #endif
 	static uint32_t last_gear_update = 0;
 
+#ifdef RUNTIME_STATS
 	static char taskBuffer[250];
+#endif
+
 	static uint32_t lastTaskUtilizationUpdate = 0;
 	if (HAL_GetTick() -  lastTaskUtilizationUpdate > 1000)
 	{
 		lastTaskUtilizationUpdate = HAL_GetTick();
 
+#ifdef RUNTIME_STATS
 		// TESTING: Get runtime stats
-//		vTaskGetRunTimeStats(taskBuffer);
-//		printf("%s\n", taskBuffer);
+		vTaskGetRunTimeStats(taskBuffer);
+		printf("%s\n", taskBuffer);
+#endif
 	}
 
 	if (HAL_GetTick() - lastHeartbeat > HEARTBEAT_MS_BETWEEN)
@@ -162,9 +167,9 @@ void main_loop()
 	tcm_data.current_gear = get_current_gear();
 #endif
 
-#ifndef TEST_RPM_INPUT
 	check_pulse_sensors();
-#else
+
+#ifdef TEST_RPM_INPUT
 	if (HAL_GetTick() - lastRPMIncreaseTimeMS >= 1000)
 	{
 		engineRPM = ((engineRPM - 9000 + 1000) % 5000) + 9000;
@@ -267,13 +272,28 @@ static void updateAndQueueParams(void) {
 		break;
 	}
 
-
+	switch (tcm_data.shift_test_mode) {
+		case AUTO_SHIFT_RPM:
+			update_and_queue_param_u16(&shiftTestingAdjustmentValue_ul, auto_shift_rpm);
+			break;
+		case UPSHIFT_PRELOAD:
+			update_and_queue_param_u16(&shiftTestingAdjustmentValue_ul, upshift_preload_time);
+			break;
+		case DOWNSHIFT_PRELOAD:
+			update_and_queue_param_u16(&shiftTestingAdjustmentValue_ul, downshift_preload_time);
+			break;
+		default:
+			break;
+	}
 }
 
 static float last_upshift_button = 0;
 static float last_downshift_button = 0;
 static float last_timeShiftOnly_button = 0;
 static float last_dial_num = 0;
+static U32 last_dial_change_time = 0;
+S8 dial_movement = 0;
+
 #ifdef CAN_CLUTCHLESS_DOWNSHIFT
 static float last_clutchlessDownshift_button = 0;
 #endif
@@ -303,51 +323,49 @@ static void check_driver_inputs() {
 	}
 	last_shiftTestMode_button = ADJUSTMENT_MODE_CHANGE_BUTTON;
 
-	switch (tcm_data.shift_test_mode) {
-		case AUTO_SHIFT_RPM:
-			//auto_shift_rpm = swDial_ul.data * 500 + 9000;
+	if (swDial_ul.data > last_dial_num) {
+		dial_movement = 1;
+		last_dial_num = swDial_ul.data;
+	} else if (swDial_ul.data < last_dial_num) {
+		dial_movement = -1;
+		last_dial_num = swDial_ul.data;
+	} else {
+		dial_movement = 0;
+	}
 
-			if (swDial_ul.data > last_dial_num) {
-				if(auto_shift_rpm < 13000) {
-					auto_shift_rpm += 1000;
+	if(dial_movement != 0 && (HAL_GetTick() - last_dial_change_time > 100)) {
+		last_dial_change_time = HAL_GetTick();
+		switch (tcm_data.shift_test_mode) {
+			case AUTO_SHIFT_RPM:
+				//auto_shift_rpm = swDial_ul.data * 500 + 9000;
+
+				if (dial_movement == 1) {
+					if(auto_shift_rpm < 15000) {
+						auto_shift_rpm += 1000;
+					}
+				} else if (dial_movement == -1) {
+					if(auto_shift_rpm > 10000) {
+						auto_shift_rpm -= 1000;
+					}
 				}
+				break;
+			case UPSHIFT_PRELOAD:
 
-				last_dial_num = swDial_ul.data;
-			} else if (swDial_ul.data < last_dial_num) {
-				if(auto_shift_rpm > 10000) {
-					auto_shift_rpm -= 1000;
-				}
+				upshift_preload_time += dial_movement * 5;
+				if(upshift_preload_time > 100) upshift_preload_time = 100;
+				else if(upshift_preload_time < 0) upshift_preload_time = 0;
 
-				last_dial_num = swDial_ul.data;
-			}
+				break;
+			case DOWNSHIFT_PRELOAD:
 
-//			switch(swDial_ul.data) {
-//				case 12:
-//					auto_shift_rpm = 10000;
-//					break;
-//				case 13:
-//					auto_shift_rpm = 11000;
-//					break;
-//				case 14:
-//					auto_shift_rpm = 12000;
-//					break;
-//				case 15:
-//					auto_shift_rpm = 13000;
-//					break;
-//				default:
-//					auto_shift_rpm = 0;
-//					break;
-//			}
-			update_and_queue_param_u16(&shiftTestingAdjustmentValue_ul, auto_shift_rpm);
-			break;
-		case UPSHIFT_PRELOAD:
-			upshift_preload_time = swDial_ul.data * 5;
-			update_and_queue_param_u16(&shiftTestingAdjustmentValue_ul, upshift_preload_time);
-			break;
-		case DOWNSHIFT_PRELOAD:
-			upshift_preload_time = swDial_ul.data * 500 + 9000;
-			update_and_queue_param_u16(&shiftTestingAdjustmentValue_ul, upshift_preload_time);
-			break;
+				downshift_preload_time += dial_movement * 5;
+				if(downshift_preload_time > 100) downshift_preload_time = 100;
+				else if(downshift_preload_time < 0) downshift_preload_time = 0;
+
+				break;
+			default:
+				break;
+		}
 	}
 
 	// Check button was released before trying shifting again - falling edge
@@ -438,13 +456,14 @@ static void shifting_task() {
 
 #ifdef AUTO_SHIFT_RPM
 		if ((tcm_data.pending_shift == NONE) && (HAL_GetTick() - last_auto_upshift_time_ms > AUTO_RPM_UPSHIFT_COOLDOWN_TIME_MS)) {
-			if((auto_shift_rpm != 0) && (tcm_data.trans_speed >= auto_shift_rpm)) {
+			if((auto_shift_rpm != 0) && (tcm_data.current_RPM > auto_shift_rpm)) {
 				if (!was_waiting_to_auto_shift) {
 					was_waiting_to_auto_shift = true;
 					last_time_above_desired_rpm = HAL_GetTick();
 				}
 				if (HAL_GetTick() - last_time_above_desired_rpm > TIME_AT_DESIRED_RPM_MS) {
 					tcm_data.pending_shift = UPSHIFT;
+					last_auto_upshift_time_ms = HAL_GetTick();
 					break;
 				}
 			} else {
