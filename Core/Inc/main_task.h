@@ -11,9 +11,10 @@
 #define SLOW_CLUTCH_BUTTON (swSlowClutch_state.data)
 #define TIME_SHIFT_ONLY_BUTTON (swButon2_state.data)
 #define CLUTCHLESS_DOWNSHIFT_BUTTON (swButon3_state.data)
+#define AUTO_SHIFT_BUTTON (swButon1_state.data)
 #define UPSHIFT_BUTTON (swUpshift_state.data)
 #define DOWNSHIFT_BUTTON (swDownshift_state.data)
-#define ADJUSTMENT_MODE_CHANGE_BUTTON (swButon1_state.data)
+#define ADJUSTMENT_MODE_CHANGE_BUTTON (swButon3_state.data)
 
 // Use this to define what module this board will be
 #define THIS_MODULE_ID TCM_ID
@@ -35,6 +36,7 @@
 //#define CAN_CLUTCHLESS_DOWNSHIFT
 #define CAN_CHANGE_FROM_TIME_SHIFT
 //#define SHIFT_DEBUG
+//#define RUN_TIME_STATS
 #define RPM_AUTO_SHIFT
 //#define TEST_RPM_INPUT
 
@@ -43,15 +45,6 @@
 #define PRINTF_HB_MS_BETWEEN 1000
 #define HEARTBEAT_MS_BETWEEN 500
 #define TCM_DATA_UPDATE_MS_BETWEEN 10
-
-// Fault LED times
-#define OVERCURRENT_FAULT_LED_TIME_MS 10000
-
-//#define AUTO_SHIFT_LEVER_RETURN
-//#define CAN_CLUTCHLESS_DOWNSHIFT
-#define CAN_CHANGE_FROM_TIME_SHIFT
-//#define SHIFT_DEBUG
-//#define RUN_TIME_STATS
 
 typedef enum
 {

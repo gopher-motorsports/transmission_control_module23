@@ -459,7 +459,7 @@ static void shifting_task() {
 		}
 
 #ifdef AUTO_SHIFT_RPM
-		if ((tcm_data.pending_shift == NONE) && (HAL_GetTick() - last_auto_upshift_time_ms > AUTO_RPM_UPSHIFT_COOLDOWN_TIME_MS)) {
+		if ((AUTO_SHIFT_BUTTON == 1) && (tcm_data.pending_shift == NONE) && (HAL_GetTick() - last_auto_upshift_time_ms > AUTO_RPM_UPSHIFT_COOLDOWN_TIME_MS)) {
 			if((auto_shift_rpm != 0) && (tcm_data.current_RPM > auto_shift_rpm)) {
 				if (!was_waiting_to_auto_shift) {
 					was_waiting_to_auto_shift = true;
