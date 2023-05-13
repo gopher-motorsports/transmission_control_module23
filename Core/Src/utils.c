@@ -32,6 +32,7 @@ void update_tcm_data(void)
 {
 	update_rpm_arr();
 	tcm_data.current_RPM = get_ECU_RPM();
+	tcm_data.currently_moving = (tcm_data.trans_speed != 0);
 }
 
 // check_buttons_and_set_clutch_sol
