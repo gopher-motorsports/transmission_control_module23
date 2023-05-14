@@ -337,15 +337,19 @@ static void shifting_task() {
 #endif
 
 		// start a shift if there is one pending. This means that a new
-		// shift can be queued during the last shift
+		// shift can be queued during the last shift. Always allow shifts in time shifting mode
 		if(tcm_data.pending_shift == UPSHIFT) {
-			if (calc_validate_upshift(tcm_data.current_gear, tcm_data.sw_fast_clutch, tcm_data.sw_slow_clutch))
+			if (calc_validate_upshift(tcm_data.current_gear, tcm_data.sw_fast_clutch,
+					                  tcm_data.sw_slow_clutch) ||
+					tcm_data.time_shift_only)
 			{
 				main_state = ST_HDL_UPSHIFT;
 				upshift_state = ST_U_BEGIN_SHIFT;
 			}
 		} else if (tcm_data.pending_shift == DOWNSHIFT) {
-			if (calc_validate_downshift(tcm_data.current_gear, tcm_data.sw_fast_clutch, tcm_data.sw_slow_clutch))
+			if (calc_validate_downshift(tcm_data.current_gear, tcm_data.sw_fast_clutch,
+					                    tcm_data.sw_slow_clutch) ||
+					tcm_data.time_shift_only)
 			{
 				main_state = ST_HDL_DOWNSHIFT;
 				downshift_state = ST_D_BEGIN_SHIFT;
