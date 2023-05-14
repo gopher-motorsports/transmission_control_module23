@@ -155,7 +155,6 @@ void main_loop()
 
 	check_pulse_sensors();
 	update_tcm_data();
-	updateAndQueueParams();
 
 	if (!initial_input_skip) {
 		check_driver_inputs();
@@ -174,6 +173,7 @@ void main_loop()
 	}
 
 	checkForErrors();
+	updateAndQueueParams();
 
 	// Clear the error byte, so it has to keep being triggered if the error is persistent (and doesn't require a function to turn it off again)
 	error_byte = 0;

@@ -9,7 +9,7 @@
 #define INC_SHIFT_PARAMETERS_H_
 
 // shifting defines for both upshift and downshift
-#define LEVER_NEUTRAL_POS_MM 37.0f
+#define LEVER_NEUTRAL_POS_MM 33.5f
 #define LEVER_NEUTRAL_TOLERANCE 0.8
 #define TARGET_RPM_TOLERANCE 0.03f
 
