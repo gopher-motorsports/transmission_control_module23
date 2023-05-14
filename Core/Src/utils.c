@@ -112,49 +112,47 @@ U32 calc_target_RPM(gear_t target_gear) {
 // calc_validate_upshift
 //  will check if an upshift is valid in the current state of the car. Will also
 //  set the target gear and target RPM if the shift is valid
-bool calc_validate_upshift(gear_t current_gear, U8 fast_clutch, U8 slow_clutch) {
-	if(!tcm_data.time_shift_only) {
-		switch (current_gear)
-			{
-			case NEUTRAL:
-				// Clutch must be pressed to go from NEUTRAL -> 1st
-				if (fast_clutch || slow_clutch)
-				{
-					tcm_data.target_RPM = 0;
-					tcm_data.target_gear = GEAR_1;
-					return true;
-				}
-				else
-				{
-					return false;
-				}
+bool calc_validate_upshift(gear_t current_gear, U8 fast_clutch, U8 slow_clutch)
+{
+	switch (current_gear)
+	{
+	case NEUTRAL:
+		// Clutch must be pressed to go from NEUTRAL -> 1st
+		if (fast_clutch || slow_clutch)
+		{
+			tcm_data.target_RPM = 0;
+			tcm_data.target_gear = GEAR_1;
+			return true;
+		}
+		else
+		{
+			return false;
+		}
 
-			case GEAR_1:
-			case GEAR_2:
-			case GEAR_3:
-			case GEAR_4:
-				tcm_data.target_gear = current_gear + 2;
-				tcm_data.target_RPM = calc_target_RPM(tcm_data.target_gear);
-				// always allow shifts for now
-				//return validate_target_RPM();
-				return true;
-			case GEAR_0_5:
-			case GEAR_1_5:
-			case GEAR_2_5:
-			case GEAR_3_5:
-			case GEAR_4_5:
-				tcm_data.target_gear = current_gear + 1;
-				tcm_data.target_RPM = calc_target_RPM(tcm_data.target_gear);
-			case GEAR_5:
-				return false;
-			case ERROR_GEAR:
-			default:
-				tcm_data.target_gear = ERROR_GEAR;
-				tcm_data.target_RPM = 0;
-				return true;
-			}
+	case GEAR_1:
+	case GEAR_2:
+	case GEAR_3:
+	case GEAR_4:
+		tcm_data.target_gear = current_gear + 2;
+		tcm_data.target_RPM = calc_target_RPM(tcm_data.target_gear);
+		// always allow shifts for now
+		//return validate_target_RPM();
+		return true;
+	case GEAR_0_5:
+	case GEAR_1_5:
+	case GEAR_2_5:
+	case GEAR_3_5:
+	case GEAR_4_5:
+		tcm_data.target_gear = current_gear + 1;
+		tcm_data.target_RPM = calc_target_RPM(tcm_data.target_gear);
+	case GEAR_5:
+		return false;
+	case ERROR_GEAR:
+	default:
+		tcm_data.target_gear = ERROR_GEAR;
+		tcm_data.target_RPM = 0;
+		return true;
 	}
-	return true;
 }
 
 // calc_validate_downshift
@@ -162,44 +160,41 @@ bool calc_validate_upshift(gear_t current_gear, U8 fast_clutch, U8 slow_clutch) 
 //  set the target gear and target RPM if the shift is valid
 bool calc_validate_downshift(gear_t current_gear, U8 fast_clutch, U8 slow_clutch)
 {
-	if(!tcm_data.time_shift_only) {
-		switch (current_gear)
+	switch (current_gear)
+	{
+	case GEAR_1:
+		// Clutch must be pulled to go from 1st back to nuetral
+		if (fast_clutch || slow_clutch)
 		{
-		case GEAR_1:
-			// Clutch must be pulled to go from 1st back to nuetral
-			if (fast_clutch || slow_clutch)
-			{
-				tcm_data.target_gear = NEUTRAL;
-				return true;
-			}
-			else
-			{
-				return false;
-			}
-		case GEAR_2:
-		case GEAR_3:
-		case GEAR_4:
-		case GEAR_5:
-			tcm_data.target_gear = current_gear - 2;
-			// for now always allow downshifts, even if the target RPM is too high
-			//return validate_target_RPM();
-			return true;
-		case GEAR_0_5:
-		case GEAR_1_5:
-		case GEAR_2_5:
-		case GEAR_3_5:
-		case GEAR_4_5:
-			tcm_data.target_gear = current_gear - 1;
-		case NEUTRAL:
-			return false;
-		case ERROR_GEAR:
-		default:
-			tcm_data.target_gear = ERROR_GEAR;
-			tcm_data.target_RPM = 0;
+			tcm_data.target_gear = NEUTRAL;
 			return true;
 		}
+		else
+		{
+			return false;
+		}
+	case GEAR_2:
+	case GEAR_3:
+	case GEAR_4:
+	case GEAR_5:
+		tcm_data.target_gear = current_gear - 2;
+		// for now always allow downshifts, even if the target RPM is too high
+		//return validate_target_RPM();
+		return true;
+	case GEAR_0_5:
+	case GEAR_1_5:
+	case GEAR_2_5:
+	case GEAR_3_5:
+	case GEAR_4_5:
+		tcm_data.target_gear = current_gear - 1;
+	case NEUTRAL:
+		return false;
+	case ERROR_GEAR:
+	default:
+		tcm_data.target_gear = ERROR_GEAR;
+		tcm_data.target_RPM = 0;
+		return true;
 	}
-	return true;
 }
 
 // validate_target_RPM
