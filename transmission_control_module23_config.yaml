@@ -2,7 +2,7 @@ module_name: "TCM"
 
 buckets:
     low_frequency_tcm:
-        frequency_hz: 100
+        frequency_hz: 250
         parameters:
             gearPosition_mm:
                 ADC: ADC1_IN10

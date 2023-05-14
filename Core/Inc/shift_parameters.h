@@ -14,17 +14,16 @@
 #define TARGET_RPM_TOLERANCE 0.03f
 
 // upshift defines
-#define UPSHIFT_SHIFT_LEVER_PRELOAD_TIME_MS 60 // long preload to get lots of load on the shift lever
+#define UPSHIFT_SHIFT_LEVER_PRELOAD_TIME_MS 30 // long preload to get lots of load on the shift lever
 #define UPSHIFT_EXIT_TIMEOUT_MS 25 // short time to exit. If the shift lever wasn't pushed far enough quickly it is probably stuck
 #define UPSHIFT_EXIT_SPARK_RETURN_MS 10 // we dont want the spark return to be too long
-#define UPSHIFT_ENTER_TIMEOUT_MS 30 // data shows this does not take very long, so have a pretty short timeout here.
+#define UPSHIFT_ENTER_TIMEOUT_MS 30 // data shows this dioes not take very long, so have a pretty short timeout here.
 #define UPSHIFT_EXIT_POS_MM 42.8f
 #define UPSHIFT_ENTER_POS_MM 47.3f
-#define UPSHIFT_EXIT_GEAR_TIME_MS 40
+// upshift time-based shifting
+#define UPSHIFT_EXIT_GEAR_TIME_MS 30
 #define UPSHIFT_ENTER_GEAR_TIME_MS 40
-#define UPSHIFT_EXTRA_PUSH_TIME_MS 100
-#define DOWNSHIFT_EXIT_GEAR_TIME_MS 60
-#define DOWNSHIFT_ENTER_GEAR_TIME_MS 60
+#define UPSHIFT_EXTRA_PUSH_TIME_MS 50
 
 // downshift defines
 #define DOWNSHIFT_SHIFT_LEVER_PRELOAD_TIME_MS 20 // preloads seem to be less important for downshifts as exiting gear is almost always successful
@@ -33,7 +32,10 @@
 #define DOWNSHIFT_FAIL_EXTRA_CLUTCH_HOLD 50 // some extra time is given in addition because the clutch takes some time to return to the bite point
 #define DOWNSHIFT_EXIT_POS_MM 34.0f
 #define DOWNSHIFT_ENTER_POS_MM 28.2f
-#define DOWNSHIFT_EXTRA_PUSH_TIME_MS 100
+// downshift time-based shifting
+#define DOWNSHIFT_EXTRA_PUSH_TIME_MS 50
+#define DOWNSHIFT_EXIT_GEAR_TIME_MS 60
+#define DOWNSHIFT_ENTER_GEAR_TIME_MS 60
 
 // clutch defines
 #define CLUTCH_OPEN_POS_MM 2.3f
@@ -59,13 +61,13 @@
 #define GEAR_4_TRANS_RATIO 2.86f
 #define GEAR_5_TRANS_RATIO 2.60f
 
-#define GEAR_POS_MARGIN_mm 0.05
-#define NEUTRAL_DISTANCE_mm 2.59	// 2.601 for down
-#define GEAR_1_DISTANCE_mm 2.45	// 2.484 for down
-#define GEAR_2_DISTANCE_mm 2.24	// 2.272 for down
-#define GEAR_3_DISTANCE_mm 1.89	// 1.938 for down
-#define GEAR_4_DISTANCE_mm 1.60	// 1.644 for down
-#define GEAR_5_DISTANCE_mm 1.23 // 1.305 for down
+#define GEAR_POS_MARGIN_mm 0.06
+#define NEUTRAL_DISTANCE_mm 2.60 // 2.601 for down
+#define GEAR_1_DISTANCE_mm 2.482 // 2.485 for down
+#define GEAR_2_DISTANCE_mm 2.297 // 2.300 for down
+#define GEAR_3_DISTANCE_mm 1.955 // 1.945 for down
+#define GEAR_4_DISTANCE_mm 1.639 // 1.633 for down
+#define GEAR_5_DISTANCE_mm 1.270
 
 // RPM cutoffs
 #define MAX_RPM 14000
