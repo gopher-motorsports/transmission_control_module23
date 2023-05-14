@@ -33,12 +33,12 @@ static U32 lastShiftingChangeTick = 0;
 #endif
 // Array for the amount of time each error should latch the
 U16 error_led_on_times[] = {
-	OVERCURRENT_FAULT_LED_TIME_MS, // SENSE_OUT_OVERCURRENT_3V3
-	OVERCURRENT_FAULT_LED_TIME_MS, // SENSE_OUT_OVERCURRENT_5V
-	0,	// SHIFT_POSITION_TIMEOUT
-	0,	// CLUTCH_POSITION_TIMEOUT
-	0,
-	0,
+	OVERCURRENT_FAULT_LED_MS, // SENSE_OUT_OVERCURRENT_3V3
+	OVERCURRENT_FAULT_LED_MS, // SENSE_OUT_OVERCURRENT_5V
+	SHIFT_SAFETY_FAULT_LED_MS,	//
+	SHIFT_SAFETY_FAULT_LED_MS,	//
+	SHIFT_TIMEOUT_FAULT_LED_MS,
+	SHIFT_TIMEOUT_FAULT_LED_MS,
 	0,
 	0
 };
@@ -186,7 +186,6 @@ static void checkForErrors(void) {
 	// Can expand into for loop if more pins to read from in the future, but for now just check the 2 fault input pins.
 	if (!HAL_GPIO_ReadPin(SWITCH_FAULT_3V3_GPIO_Port, SWITCH_FAULT_3V3_Pin)) {
 		error(SENSE_OUT_OVERCURRENT_3V3, &error_byte);
-
 	}
 
 	if (!HAL_GPIO_ReadPin(SWITCH_FAULT_5V_GPIO_Port, SWITCH_FAULT_5V_Pin)) {
@@ -535,6 +534,7 @@ static void run_upshift_sm(void)
 			{
 				// the shift lever did not exit the previous gear. Attempt to
 				// return spark to attempt to disengage
+				error(SHIFT_STATE_TIMEOUT, &error_byte);
 				begin_exit_gear_spark_return_tick = HAL_GetTick();
 				safe_spark_cut(false);
 				next_upshift_state = ST_U_SPARK_RETURN;
@@ -660,7 +660,7 @@ static void run_upshift_sm(void)
 			// check if we are out of time for this state
 			if (HAL_GetTick() - begin_enter_gear_tick > UPSHIFT_ENTER_TIMEOUT_MS)
 			{
-
+				error(SHIFT_STATE_TIMEOUT, &error_byte);
 				// at this point the shift was probably not successful. Note this so we
 				// dont increment the gears and move on
 				tcm_data.successful_shift = false;
@@ -867,6 +867,8 @@ static void run_downshift_sm(void)
 			// check if this state has timed out
 			if (HAL_GetTick() - begin_exit_gear_tick > DOWNSHIFT_EXIT_TIMEOUT_MS)
 			{
+				error(SHIFT_STATE_TIMEOUT, &error_byte);
+
 				// We could not release the gear for some reason. Keep trying anyway
 				next_downshift_state = ST_D_ENTER_GEAR;
 				begin_enter_gear_tick = HAL_GetTick();
@@ -949,6 +951,8 @@ static void run_downshift_sm(void)
 			// check for a timeout entering the gear
 			if (HAL_GetTick() - begin_enter_gear_tick > DOWNSHIFT_ENTER_TIMEOUT_MS)
 			{
+				error(SHIFT_STATE_TIMEOUT, &error_byte);
+
 				// the shift failed to enter the gear. We want to keep the clutch
 				// open for some extra time to try and give the driver the chance
 				// to rev around and find a gear. Call this shift a failure

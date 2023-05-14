@@ -9,6 +9,8 @@
 
 tcm_data_struct_t tcm_data = {.current_gear = ERROR_GEAR};
 
+extern U8 error_byte;
+
 const float gear_ratios[5] = {
 		GEAR_1_TRANS_RATIO,
 		GEAR_2_TRANS_RATIO,
@@ -126,6 +128,7 @@ bool calc_validate_upshift(gear_t current_gear, U8 fast_clutch, U8 slow_clutch) 
 				}
 				else
 				{
+					error(NO_CLUTCH_OUT_NUETRAL, &error_byte);
 					return false;
 				}
 
@@ -146,6 +149,7 @@ bool calc_validate_upshift(gear_t current_gear, U8 fast_clutch, U8 slow_clutch) 
 				tcm_data.target_gear = current_gear + 1;
 				tcm_data.target_RPM = calc_target_RPM(tcm_data.target_gear);
 			case GEAR_5:
+				error(GEAR_LIMIT, &error_byte);
 				return false;
 			case ERROR_GEAR:
 			default:
@@ -174,6 +178,7 @@ bool calc_validate_downshift(gear_t current_gear, U8 fast_clutch, U8 slow_clutch
 			}
 			else
 			{
+				error(NO_CLUTCH_OUT_NUETRAL, &error_byte);
 				return false;
 			}
 		case GEAR_2:
@@ -191,6 +196,7 @@ bool calc_validate_downshift(gear_t current_gear, U8 fast_clutch, U8 slow_clutch
 		case GEAR_4_5:
 			tcm_data.target_gear = current_gear - 1;
 		case NEUTRAL:
+			error(GEAR_LIMIT, &error_byte);
 			return false;
 		case ERROR_GEAR:
 		default:
