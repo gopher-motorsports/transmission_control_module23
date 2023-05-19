@@ -497,12 +497,12 @@ static void run_upshift_sm(void)
 		// engine. If all goes well, the gear should be left at that midpoint
 		set_upshift_solenoid(SOLENOID_ON);
 
-		safe_spark_cut(true);
-
 		// check which shift mode we're in (to determine whether sensors
 		//  should be used)
 		if (!tcm_data.time_shift_only)
 		{
+			safe_spark_cut(true);
+
 #ifdef NO_GEAR_POT
 			// wait for the shift lever to reach the leaving threshold
 			if (get_shift_pot_pos() > UPSHIFT_EXIT_POS_MM)
@@ -556,6 +556,8 @@ static void run_upshift_sm(void)
 		}
 		else
 		{
+			set_spark_cut(true);
+
 			if (HAL_GetTick() - begin_exit_gear_tick > UPSHIFT_EXIT_GEAR_TIME_MS) {
 				next_upshift_state = ST_U_ENTER_GEAR;
 				begin_enter_gear_tick = HAL_GetTick();
@@ -580,7 +582,8 @@ static void run_upshift_sm(void)
 		// the spark is cut. In order to leave the gear we must return spark
 		// briefly
 		set_upshift_solenoid(SOLENOID_ON);
-		safe_spark_cut(true);
+
+		safe_spark_cut(false);
 
 #ifdef NO_GEAR_POT
 		// the shifter has moved above the threshold of exiting the gear. Spark
@@ -708,6 +711,7 @@ static void run_upshift_sm(void)
 		break;
 
 	case ST_U_EXTRA_PUSH:
+
 		safe_spark_cut(false);
 
 		set_upshift_solenoid(SOLENOID_ON);
@@ -808,7 +812,11 @@ static void run_downshift_sm(void)
 		// EXPIREMENTAL: spark cut during this preload time and tell drivers
 		// to blip when they start the shift. This will allow drivers to worry
 		// less about timing their blips perfectly because the TCM will do it
-		safe_spark_cut(true);
+		if (!tcm_data.time_shift_only) {
+			safe_spark_cut(true);
+		} else {
+			set_spark_cut(true);
+		}
 
 		if ((HAL_GetTick() - begin_shift_tick > DOWNSHIFT_SHIFT_LEVER_PRELOAD_TIME_MS))
 		{

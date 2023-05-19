@@ -63,11 +63,11 @@
 
 #define GEAR_POS_MARGIN_mm 0.06
 #define NEUTRAL_DISTANCE_mm 2.60 // 2.601 for down
-#define GEAR_1_DISTANCE_mm 2.482 // 2.485 for down
-#define GEAR_2_DISTANCE_mm 2.297 // 2.300 for down
-#define GEAR_3_DISTANCE_mm 1.955 // 1.945 for down
-#define GEAR_4_DISTANCE_mm 1.639 // 1.633 for down
-#define GEAR_5_DISTANCE_mm 1.270
+#define GEAR_1_DISTANCE_mm 2.455 // 2.485 for down
+#define GEAR_2_DISTANCE_mm 2.265 // 2.300 for down
+#define GEAR_3_DISTANCE_mm 1.915 // 1.945 for down
+#define GEAR_4_DISTANCE_mm 1.600 // 1.633 for down
+#define GEAR_5_DISTANCE_mm 1.260
 
 // RPM cutoffs
 #define MAX_RPM 14000
