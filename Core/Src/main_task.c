@@ -217,14 +217,19 @@ static void checkForErrors(void) {
 // Updates gcan variables
 static void updateAndQueueParams(void) {
 	update_and_queue_param_float(&counterShaftSpeed_rpm, tcm_data.trans_speed);
-	update_and_queue_param_u16(&tcmTargetRPM_rpm, tcm_data.target_RPM); // Sends it to be logged
+	update_and_queue_param_u16(&tcmTargetRPM_rpm, tcm_data.target_RPM);
 	update_and_queue_param_u8(&tcmCurrentGear_state, tcm_data.current_gear);
 	update_and_queue_param_u8(&tcmCurrentlyMoving_state, tcm_data.currently_moving);
 	update_and_queue_param_u8(&tcmAntiStallActive_state, tcm_data.anti_stall);
 	update_and_queue_param_u8(&tcmUsingClutch_state, tcm_data.using_clutch);
 	update_and_queue_param_u8(&tcmTimeShiftOnly_state, tcm_data.time_shift_only);
 	update_and_queue_param_u8(&tcmClutchlessDownshift_state, tcm_data.clutchless_downshift);
-	update_and_queue_param_u8(&tcmError_state, error_byte);
+	update_and_queue_param_u8(&tcmTargetGear_state, tcm_data.target_gear);
+	update_and_queue_param_u8(&tcmSpkCut_state, tcm_data.spark_cut);
+	update_and_queue_param_u8(&tcmClutchlessDownshift_state, tcm_data.clutchless_downshift);
+	update_and_queue_param_u8(&tcmSuccessfulShift_state, tcm_data.successful_shift);
+	update_and_queue_param_u16(&tcmNumShifts_ul, tcm_data.num_shifts);
+	update_and_queue_param_u16(&tcmNumSuccessfulShifts_ul, tcm_data.num_successful_shifts);
 
 	switch (main_state)
 	{
@@ -447,6 +452,7 @@ static void run_upshift_sm(void)
 #endif
 
 		initial_gear = tcm_data.current_gear;
+		tcm_data.successful_shift = false;
 
 		set_upshift_solenoid(SOLENOID_ON); // start pushing upshift
 
@@ -725,6 +731,7 @@ static void run_upshift_sm(void)
 
 		safe_spark_cut(false);
 		tcm_data.using_clutch = false;
+		tcm_data.num_shifts += 1;
 
 #ifdef NO_GEAR_POT
 		// Only grab the current gear if we don't have a gear pot
@@ -735,6 +742,9 @@ static void run_upshift_sm(void)
 		// Determine if the shift was successful by checking if we changed gear correctly
 		tcm_data.successful_shift = tcm_data.current_gear > initial_gear + 2;
 		tcm_data.gear_established = tcm_data.successful_shift;
+		if (tcm_data.successful_shift) {
+			tcm_data.num_successful_shifts += 1;
+		}
 
 		// done with the upshift state machine
 		set_upshift_solenoid(SOLENOID_OFF);
@@ -778,6 +788,7 @@ static void run_downshift_sm(void)
 		tcm_data.current_gear = get_current_gear();
 #endif
 		initial_gear = tcm_data.current_gear;
+		tcm_data.successful_shift = false;
 
 		set_downshift_solenoid(SOLENOID_ON);
 
@@ -956,6 +967,7 @@ static void run_downshift_sm(void)
 			// check for a timeout entering the gear
 			if (HAL_GetTick() - begin_enter_gear_tick > DOWNSHIFT_ENTER_TIMEOUT_MS)
 			{
+				tcm_data.successful_shift = false;
 				error(SHIFT_STATE_TIMEOUT, &error_byte);
 
 				// the shift failed to enter the gear. We want to keep the clutch
@@ -1047,6 +1059,7 @@ static void run_downshift_sm(void)
 		safe_spark_cut(false);
 		set_clutch_solenoid(SOLENOID_OFF);
 		tcm_data.using_clutch = false;
+		tcm_data.num_shifts += 1;
 
 #ifdef NO_GEAR_POT
 		tcm_data.current_gear = get_current_gear();
@@ -1055,6 +1068,9 @@ static void run_downshift_sm(void)
 		// Determine if the shift was successful by checking if we changed gear correctly
 		tcm_data.successful_shift = tcm_data.current_gear < initial_gear - 2;
 		tcm_data.gear_established = tcm_data.successful_shift;
+		if (tcm_data.successful_shift) {
+			tcm_data.num_successful_shifts += 1;
+		}
 
 		// done with the downshift state machine
 		set_downshift_solenoid(SOLENOID_OFF);

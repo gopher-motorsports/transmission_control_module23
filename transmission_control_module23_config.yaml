@@ -1,8 +1,8 @@
 module_name: "TCM"
 
 buckets:
-    low_frequency_tcm:
-        frequency_hz: 250
+    high_frequency_tcm:
+        frequency_hz: 1000
         parameters:
             gearPosition_mm:
                 ADC: ADC1_IN10
@@ -19,7 +19,10 @@ buckets:
             counterShaftSpeed_rpm:
                 ADC: NON_ADC
                 sensor: NON_ADC
-                samples_buffered: 1                
+                samples_buffered: 1   
+    low_frequency_tcm:
+        frequency_hz: 1000
+        parameters:
             tcmTargetRPM_rpm:
                 ADC: NON_ADC
                 sensor: NON_ADC
@@ -44,10 +47,14 @@ buckets:
                 ADC: NON_ADC
                 sensor: NON_ADC
                 samples_buffered: 1
-    very_low_frequency_tcm:
-        frequency_hz: 10
-        parameters:
             tcmError_state:
+                ADC: NON_ADC
+                sensor: NON_ADC
+                samples_buffered: 1
+    very_low_frequency_tcm:
+        frequency_hz: 250
+        parameters:
+            tcmTargetGear_state:
                 ADC: NON_ADC
                 sensor: NON_ADC
                 samples_buffered: 1
@@ -59,4 +66,15 @@ buckets:
                 ADC: NON_ADC
                 sensor: NON_ADC
                 samples_buffered: 1
-            
+            tcmSpkCut_state:
+                ADC: NON_ADC
+                sensor: NON_ADC
+                samples_buffered: 1
+            tcmSuccessfulShift_state:
+                ADC: NON_ADC
+                sensor: NON_ADC
+                samples_buffered: 1
+            tcmNumSuccessfulShifts_ul:
+                ADC: NON_ADC
+                sensor: NON_ADC
+                samples_buffered: 1

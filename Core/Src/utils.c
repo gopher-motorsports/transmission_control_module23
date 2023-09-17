@@ -276,6 +276,7 @@ void set_downshift_solenoid(solenoid_position_t position)
 void set_spark_cut(bool state)
 {
 	HAL_GPIO_WritePin(SPK_CUT_GPIO_Port, SPK_CUT_Pin, !state);
+	tcm_data.spark_cut = state;
 }
 
 // get_ave_rpm

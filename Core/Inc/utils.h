@@ -33,6 +33,8 @@ typedef struct tcm_data_struct
 
 	U8 sw_fast_clutch;
 	U8 sw_slow_clutch;
+	U8 num_shifts;
+	U8 num_successful_shifts;
 	Pending_Shift_t pending_shift;
 
 	bool currently_moving;	// Is the car moving?
@@ -42,6 +44,7 @@ typedef struct tcm_data_struct
 	bool anti_stall;		// Anti Stall
 	bool clutchless_downshift;
 	bool time_shift_only;
+	bool spark_cut;
 } tcm_data_struct_t;
 
 typedef enum
