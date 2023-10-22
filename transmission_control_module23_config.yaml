@@ -52,7 +52,7 @@ buckets:
                 sensor: NON_ADC
                 samples_buffered: 1
     very_low_frequency_tcm:
-        frequency_hz: 250
+        frequency_hz: 1000
         parameters:
             tcmTargetGear_state:
                 ADC: NON_ADC
