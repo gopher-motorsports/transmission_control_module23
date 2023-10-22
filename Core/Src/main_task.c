@@ -214,20 +214,23 @@ static void checkForErrors(void) {
 	}
 }
 
+static float shift_mode_2 = 0;
+
 // Updates gcan variables
 static void updateAndQueueParams(void) {
 	update_and_queue_param_float(&counterShaftSpeed_rpm, tcm_data.trans_speed);
+	update_and_queue_param_float(&tcmCurrentGear_state, tcm_data.current_gear);
 	update_and_queue_param_u16(&tcmTargetRPM_rpm, tcm_data.target_RPM);
-	update_and_queue_param_u8(&tcmCurrentGear_state, tcm_data.current_gear);
 	update_and_queue_param_u8(&tcmCurrentlyMoving_state, tcm_data.currently_moving);
 	update_and_queue_param_u8(&tcmAntiStallActive_state, tcm_data.anti_stall);
 	update_and_queue_param_u8(&tcmUsingClutch_state, tcm_data.using_clutch);
 	update_and_queue_param_u8(&tcmTimeShiftOnly_state, tcm_data.time_shift_only);
-	update_and_queue_param_u8(&tcmClutchlessDownshift_state, tcm_data.clutchless_downshift);
+	update_and_queue_param_u8(&tcmClutchlessDownshift_state, shift_mode_2); // tcm_data.clutchless_downshift);
 	update_and_queue_param_u8(&tcmTargetGear_state, tcm_data.target_gear);
 	update_and_queue_param_u8(&tcmSpkCut_state, tcm_data.spark_cut);
 	update_and_queue_param_u8(&tcmClutchlessDownshift_state, tcm_data.clutchless_downshift);
 	update_and_queue_param_u8(&tcmSuccessfulShift_state, tcm_data.successful_shift);
+	update_and_queue_param_u8(&tcmError_state, error_byte);
 	update_and_queue_param_u16(&tcmNumShifts_ul, tcm_data.num_shifts);
 	update_and_queue_param_u16(&tcmNumSuccessfulShifts_ul, tcm_data.num_successful_shifts);
 
@@ -275,7 +278,8 @@ static void check_driver_inputs() {
 
 #ifdef CAN_CLUTCHLESS_DOWNSHIFT
 	if((last_clutchlessDownshift_button == 0) && (CLUTCHLESS_DOWNSHIFT_BUTTON == 1)) {
-		tcm_data.clutchless_downshift = !tcm_data.clutchless_downshift;
+		// tcm_data.clutchless_downshift = !tcm_data.clutchless_downshift; // commented out for shift testing and instead used for 2nd shift parameter mode
+		shift_mode_2 = !shift_mode_2;
 	}
 	last_clutchlessDownshift_button = CLUTCHLESS_DOWNSHIFT_BUTTON;
 #endif
@@ -475,7 +479,7 @@ static void run_upshift_sm(void)
 		safe_spark_cut(false);
 
 		// wait for the preload time to be over
-		if (HAL_GetTick() - begin_shift_tick > UPSHIFT_SHIFT_LEVER_PRELOAD_TIME_MS)
+		if (HAL_GetTick() - begin_shift_tick > UPSHIFT_SHIFT_LEVER_PRELOAD_TIME_MS(shift_mode_2))
 		{
 			// preload time is over. Start spark cutting to disengage the
 			// gears and moving the RPM to match up with the next gearS
@@ -541,7 +545,7 @@ static void run_upshift_sm(void)
 
 			// the shift lever has not moved far enough. Check if it has been
 			// long enough to timeout yet
-			if (HAL_GetTick() - begin_exit_gear_tick > UPSHIFT_EXIT_TIMEOUT_MS)
+			if (HAL_GetTick() - begin_exit_gear_tick > UPSHIFT_EXIT_TIMEOUT_MS(shift_mode_2))
 			{
 				// the shift lever did not exit the previous gear. Attempt to
 				// return spark to attempt to disengage
@@ -562,7 +566,7 @@ static void run_upshift_sm(void)
 		}
 		else
 		{
-			if (HAL_GetTick() - begin_exit_gear_tick > UPSHIFT_EXIT_GEAR_TIME_MS) {
+			if (HAL_GetTick() - begin_exit_gear_tick > UPSHIFT_EXIT_GEAR_TIME_MS(shift_mode_2)) {
 				next_upshift_state = ST_U_ENTER_GEAR;
 				begin_enter_gear_tick = HAL_GetTick();
 
@@ -596,7 +600,7 @@ static void run_upshift_sm(void)
 #else
 		if (tcm_data.current_gear > initial_gear
 #endif
-			|| HAL_GetTick() - begin_exit_gear_spark_return_tick > UPSHIFT_EXIT_SPARK_RETURN_MS)
+			|| HAL_GetTick() - begin_exit_gear_spark_return_tick > UPSHIFT_EXIT_SPARK_RETURN_MS(shift_mode_2))
 		{
 
 #ifdef SHIFT_DEBUG
@@ -669,7 +673,7 @@ static void run_upshift_sm(void)
 			}
 
 			// check if we are out of time for this state
-			if (HAL_GetTick() - begin_enter_gear_tick > UPSHIFT_ENTER_TIMEOUT_MS)
+			if (HAL_GetTick() - begin_enter_gear_tick > UPSHIFT_ENTER_TIMEOUT_MS(shift_mode_2))
 			{
 				error(SHIFT_STATE_TIMEOUT, &error_byte);
 				// at this point the shift was probably not successful. Note this so we
@@ -696,7 +700,7 @@ static void run_upshift_sm(void)
 			// will come back up when this section is over
 			set_spark_cut(true);
 
-			if (HAL_GetTick() - begin_enter_gear_tick > UPSHIFT_ENTER_GEAR_TIME_MS)
+			if (HAL_GetTick() - begin_enter_gear_tick > UPSHIFT_ENTER_GEAR_TIME_MS(shift_mode_2))
 			{
 				begin_extra_push_tick = HAL_GetTick();
 				next_upshift_state = ST_U_EXTRA_PUSH;
@@ -718,7 +722,7 @@ static void run_upshift_sm(void)
 
 		set_upshift_solenoid(SOLENOID_ON);
 
-		if (HAL_GetTick() - begin_extra_push_tick > UPSHIFT_EXTRA_PUSH_TIME_MS)
+		if (HAL_GetTick() - begin_extra_push_tick > UPSHIFT_EXTRA_PUSH_TIME_MS(shift_mode_2))
 		{
 			next_upshift_state = ST_U_FINISH_SHIFT;
 		}
@@ -740,7 +744,7 @@ static void run_upshift_sm(void)
 #endif
 
 		// Determine if the shift was successful by checking if we changed gear correctly
-		tcm_data.successful_shift = tcm_data.current_gear > initial_gear + 2;
+		tcm_data.successful_shift = tcm_data.current_gear >= initial_gear + 2;
 		tcm_data.gear_established = tcm_data.successful_shift;
 		if (tcm_data.successful_shift) {
 			tcm_data.num_successful_shifts += 1;
@@ -795,6 +799,7 @@ static void run_downshift_sm(void)
 		tcm_data.using_clutch = !tcm_data.clutchless_downshift; // EXPIREMENTAL: Uncomment the next line to only clutch during a downshift if the clutch is held during the start of the shift
 		//tcm_data.using_clutch = (car_buttons.clutch_fast_button || car_buttons.clutch_slow_button);
 
+		set_slow_clutch_drop(SOLENOID_OFF);
 		set_clutch_solenoid(tcm_data.using_clutch ? SOLENOID_ON : SOLENOID_OFF);
 
 		// move on to loading the shift lever
@@ -814,6 +819,7 @@ static void run_downshift_sm(void)
 		// load the shift lever. This is less important as we do not seem to
 		// have issues leaving the gear during a downshift
 		set_downshift_solenoid(SOLENOID_ON);
+		set_slow_clutch_drop(SOLENOID_OFF);
 		set_clutch_solenoid(tcm_data.using_clutch ? SOLENOID_ON : SOLENOID_OFF);
 
 		// EXPIREMENTAL: spark cut during this preload time and tell drivers
@@ -821,7 +827,7 @@ static void run_downshift_sm(void)
 		// less about timing their blips perfectly because the TCM will do it
 		safe_spark_cut(true);
 
-		if ((HAL_GetTick() - begin_shift_tick > DOWNSHIFT_SHIFT_LEVER_PRELOAD_TIME_MS))
+		if ((HAL_GetTick() - begin_shift_tick > DOWNSHIFT_SHIFT_LEVER_PRELOAD_TIME_MS(shift_mode_2)))
 		{
 			// done with preloading. Start allowing blips and move on to trying
 			// to exit the gear
@@ -846,6 +852,7 @@ static void run_downshift_sm(void)
 		// as we need the blip to bring the RPM up if we have not left the gear
 		// yet
 		set_downshift_solenoid(SOLENOID_ON);
+		set_slow_clutch_drop(SOLENOID_OFF);
 		set_clutch_solenoid(tcm_data.using_clutch ? SOLENOID_ON : SOLENOID_OFF);
 		safe_spark_cut(false);
 
@@ -881,7 +888,7 @@ static void run_downshift_sm(void)
 			}
 
 			// check if this state has timed out
-			if (HAL_GetTick() - begin_exit_gear_tick > DOWNSHIFT_EXIT_TIMEOUT_MS)
+			if (HAL_GetTick() - begin_exit_gear_tick > DOWNSHIFT_EXIT_TIMEOUT_MS(shift_mode_2))
 			{
 				error(SHIFT_STATE_TIMEOUT, &error_byte);
 
@@ -906,7 +913,7 @@ static void run_downshift_sm(void)
 		}
 		else
 		{
-			if (HAL_GetTick() - begin_exit_gear_tick > DOWNSHIFT_EXIT_GEAR_TIME_MS) {
+			if (HAL_GetTick() - begin_exit_gear_tick > DOWNSHIFT_EXIT_GEAR_TIME_MS(shift_mode_2)) {
 				next_downshift_state = ST_D_ENTER_GEAR;
 				begin_enter_gear_tick = HAL_GetTick();
 
@@ -927,6 +934,7 @@ static void run_downshift_sm(void)
 		// shift solenoid, but now dynamically spark cut if the blip is too big
 		// and the RPM goes too high to enter the next gear
 		set_downshift_solenoid(SOLENOID_ON);
+		set_slow_clutch_drop(SOLENOID_OFF);
 		set_clutch_solenoid(tcm_data.using_clutch ? SOLENOID_ON : SOLENOID_OFF);
 
 		if (!tcm_data.time_shift_only)
@@ -965,7 +973,7 @@ static void run_downshift_sm(void)
 			}
 
 			// check for a timeout entering the gear
-			if (HAL_GetTick() - begin_enter_gear_tick > DOWNSHIFT_ENTER_TIMEOUT_MS)
+			if (HAL_GetTick() - begin_enter_gear_tick > DOWNSHIFT_ENTER_TIMEOUT_MS(shift_mode_2))
 			{
 				tcm_data.successful_shift = false;
 				error(SHIFT_STATE_TIMEOUT, &error_byte);
@@ -974,6 +982,7 @@ static void run_downshift_sm(void)
 				// open for some extra time to try and give the driver the chance
 				// to rev around and find a gear. Call this shift a failure
 				tcm_data.using_clutch = true;
+				set_slow_clutch_drop(SOLENOID_OFF);
 				set_clutch_solenoid(SOLENOID_ON);
 				safe_spark_cut(false);
 				next_downshift_state = ST_D_HOLD_CLUTCH;
@@ -993,7 +1002,7 @@ static void run_downshift_sm(void)
 		{
 			// No spark cut without being confident in the trans speed
 
-			if (HAL_GetTick() - begin_enter_gear_tick > DOWNSHIFT_ENTER_GEAR_TIME_MS) {
+			if (HAL_GetTick() - begin_enter_gear_tick > DOWNSHIFT_ENTER_GEAR_TIME_MS(shift_mode_2)) {
 				begin_extra_push_time_tick = HAL_GetTick();
 				next_downshift_state = ST_D_EXTRA_PUSH;
 				safe_spark_cut(false);
@@ -1016,12 +1025,13 @@ static void run_downshift_sm(void)
 		// input from the driver to hit the right revs
 		// Should still happen in clutchless downshift because we only use
 		// mode to save air but would prefer not to fail shift
+		set_slow_clutch_drop(SOLENOID_OFF);
 		set_clutch_solenoid(SOLENOID_ON);
 		set_downshift_solenoid(SOLENOID_ON);
 		safe_spark_cut(false);
 
 		// check if we are done giving the extra time TODO Make sure this gets tuned (currently long apparently)
-		if (HAL_GetTick() - begin_hold_clutch_tick > DOWNSHIFT_FAIL_EXTRA_CLUTCH_HOLD)
+		if (HAL_GetTick() - begin_hold_clutch_tick > DOWNSHIFT_FAIL_EXTRA_CLUTCH_HOLD(shift_mode_2))
 		{
 			// done giving the extra clutch. Move on to finishing the shift
 			begin_extra_push_time_tick = HAL_GetTick();
@@ -1043,7 +1053,7 @@ static void run_downshift_sm(void)
 
 		set_downshift_solenoid(SOLENOID_ON);
 
-		if (HAL_GetTick() - begin_extra_push_time_tick > DOWNSHIFT_EXTRA_PUSH_TIME_MS)
+		if (HAL_GetTick() - begin_extra_push_time_tick > DOWNSHIFT_EXTRA_PUSH_TIME_MS(shift_mode_2))
 		{
 			next_downshift_state = ST_D_FINISH_SHIFT;
 		}
@@ -1057,6 +1067,7 @@ static void run_downshift_sm(void)
 		set_downshift_solenoid(SOLENOID_ON);
 
 		safe_spark_cut(false);
+		set_slow_clutch_drop(SOLENOID_OFF);
 		set_clutch_solenoid(SOLENOID_OFF);
 		tcm_data.using_clutch = false;
 		tcm_data.num_shifts += 1;
@@ -1066,7 +1077,7 @@ static void run_downshift_sm(void)
 #endif
 
 		// Determine if the shift was successful by checking if we changed gear correctly
-		tcm_data.successful_shift = tcm_data.current_gear < initial_gear - 2;
+		tcm_data.successful_shift = tcm_data.current_gear <= initial_gear - 2;
 		tcm_data.gear_established = tcm_data.successful_shift;
 		if (tcm_data.successful_shift) {
 			tcm_data.num_successful_shifts += 1;

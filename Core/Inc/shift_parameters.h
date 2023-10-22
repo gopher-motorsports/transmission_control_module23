@@ -14,28 +14,28 @@
 #define TARGET_RPM_TOLERANCE 0.03f
 
 // upshift defines
-#define UPSHIFT_SHIFT_LEVER_PRELOAD_TIME_MS 30 // long preload to get lots of load on the shift lever
-#define UPSHIFT_EXIT_TIMEOUT_MS 25 // short time to exit. If the shift lever wasn't pushed far enough quickly it is probably stuck
-#define UPSHIFT_EXIT_SPARK_RETURN_MS 10 // we dont want the spark return to be too long
-#define UPSHIFT_ENTER_TIMEOUT_MS 30 // data shows this dioes not take very long, so have a pretty short timeout here.
+#define UPSHIFT_SHIFT_LEVER_PRELOAD_TIME_MS(x) x ? 30 : 50 // long preload to get lots of load on the shift lever
+#define UPSHIFT_EXIT_TIMEOUT_MS(x) x ? 25 : 40 // short time to exit. If the shift lever wasn't pushed far enough quickly it is probably stuck
+#define UPSHIFT_EXIT_SPARK_RETURN_MS(x) x ? 10 : 15// we dont want the spark return to be too long
+#define UPSHIFT_ENTER_TIMEOUT_MS(x) x ? 30 : 50 // data shows this does not take very long, so have a pretty short timeout here.
 #define UPSHIFT_EXIT_POS_MM 42.8f
 #define UPSHIFT_ENTER_POS_MM 47.3f
 // upshift time-based shifting
-#define UPSHIFT_EXIT_GEAR_TIME_MS 30
-#define UPSHIFT_ENTER_GEAR_TIME_MS 40
-#define UPSHIFT_EXTRA_PUSH_TIME_MS 50
+#define UPSHIFT_EXIT_GEAR_TIME_MS(x) x ? 30 : 50
+#define UPSHIFT_ENTER_GEAR_TIME_MS(x) x ? 40 : 60
+#define UPSHIFT_EXTRA_PUSH_TIME_MS(x) x ? 50 : 70
 
 // downshift defines
-#define DOWNSHIFT_SHIFT_LEVER_PRELOAD_TIME_MS 20 // preloads seem to be less important for downshifts as exiting gear is almost always successful
-#define DOWNSHIFT_EXIT_TIMEOUT_MS 30 // short time to exit. Data shows we can exit pretty easily
-#define DOWNSHIFT_ENTER_TIMEOUT_MS 75
-#define DOWNSHIFT_FAIL_EXTRA_CLUTCH_HOLD 50 // some extra time is given in addition because the clutch takes some time to return to the bite point
+#define DOWNSHIFT_SHIFT_LEVER_PRELOAD_TIME_MS(x) x ? 20 : 40 // preloads seem to be less important for downshifts as exiting gear is almost always successful
+#define DOWNSHIFT_EXIT_TIMEOUT_MS(x) x ? 30 : 60 // short time to exit. Data shows we can exit pretty easily
+#define DOWNSHIFT_ENTER_TIMEOUT_MS(x) x ? 75 : 125
+#define DOWNSHIFT_FAIL_EXTRA_CLUTCH_HOLD(x) x ? 50 : 80 // some extra time is given in addition because the clutch takes some time to return to the bite point
 #define DOWNSHIFT_EXIT_POS_MM 34.0f
 #define DOWNSHIFT_ENTER_POS_MM 28.2f
 // downshift time-based shifting
-#define DOWNSHIFT_EXTRA_PUSH_TIME_MS 50
-#define DOWNSHIFT_EXIT_GEAR_TIME_MS 60
-#define DOWNSHIFT_ENTER_GEAR_TIME_MS 60
+#define DOWNSHIFT_EXTRA_PUSH_TIME_MS(x) x ? 50 : 80
+#define DOWNSHIFT_EXIT_GEAR_TIME_MS(x) x ? 60 : 80
+#define DOWNSHIFT_ENTER_GEAR_TIME_MS(x) x ? 60 : 80
 
 // clutch defines
 #define CLUTCH_OPEN_POS_MM 2.3f
