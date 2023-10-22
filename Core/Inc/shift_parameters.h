@@ -38,8 +38,8 @@
 #define DOWNSHIFT_ENTER_GEAR_TIME_MS 60
 
 // clutch defines
-#define CLUTCH_OPEN_POS_MM 2.3f
-#define CLUTCH_SLOW_DROP_FAST_TO_SLOW_EXTRA_MM 3.0f
+#define CLUTCH_OPEN_POS_MM 3.2f
+#define CLUTCH_SLOW_DROP_FAST_TO_SLOW_EXTRA_MM 3.5f
 #define CLUTCH_OPEN_TIMEOUT_MS 300
 
 // transmission, wheel speed, and RPM array defines

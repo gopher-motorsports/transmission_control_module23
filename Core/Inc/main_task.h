@@ -30,6 +30,7 @@
 #define CAN_CHANGE_FROM_TIME_SHIFT
 //#define SHIFT_DEBUG
 //#define RUN_TIME_STATS
+//#define SMART_SLOW_CLUTCH
 
 typedef enum
 {

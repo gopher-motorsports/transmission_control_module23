@@ -399,13 +399,14 @@ static void clutch_task() {
 		// of a shift
 		set_clutch_solenoid(SOLENOID_OFF);
 
+#ifdef SMART_SLOW_CLUTCH
 		// if we are using slow drop enable or disable the slow release valve depending
 		// on if we are near the bite point
 		if (using_slow_drop)
 		{
 			// TODO: Check if we want a way to make this not closed loop
 			// when slow dropping, we want to start by fast dropping until the bite point
-			if (get_clutch_pot_pos() > CLUTCH_OPEN_POS_MM + CLUTCH_SLOW_DROP_FAST_TO_SLOW_EXTRA_MM)
+			if (get_clutch_pot_pos() > (CLUTCH_OPEN_POS_MM + CLUTCH_SLOW_DROP_FAST_TO_SLOW_EXTRA_MM))
 			{
 				set_slow_clutch_drop(false);
 			}
@@ -418,7 +419,15 @@ static void clutch_task() {
 		{
 			// not using slow drop
 			set_slow_clutch_drop(false);
+
 		}
+#else
+		if (using_slow_drop) {
+			set_slow_clutch_drop(true);
+		} else {
+			set_slow_clutch_drop(false);
+		}
+#endif
 	}
 }
 
