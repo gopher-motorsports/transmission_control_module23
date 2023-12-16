@@ -21,9 +21,9 @@
 #define UPSHIFT_EXIT_POS_MM 42.8f
 #define UPSHIFT_ENTER_POS_MM 47.3f
 // upshift time-based shifting
-#define UPSHIFT_EXIT_GEAR_TIME_MS 30
-#define UPSHIFT_ENTER_GEAR_TIME_MS 40
-#define UPSHIFT_EXTRA_PUSH_TIME_MS 50
+#define UPSHIFT_EXIT_GEAR_TIME_MS 75
+#define UPSHIFT_ENTER_GEAR_TIME_MS 75
+#define UPSHIFT_EXTRA_PUSH_TIME_MS 0
 
 // downshift defines
 #define DOWNSHIFT_SHIFT_LEVER_PRELOAD_TIME_MS 20 // preloads seem to be less important for downshifts as exiting gear is almost always successful
