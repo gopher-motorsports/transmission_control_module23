@@ -805,6 +805,7 @@ static void run_downshift_sm(void)
 		//tcm_data.using_clutch = (car_buttons.clutch_fast_button || car_buttons.clutch_slow_button);
 
 		set_clutch_solenoid(tcm_data.using_clutch ? SOLENOID_ON : SOLENOID_OFF);
+		safe_spark_cut(true);
 
 		// move on to loading the shift lever
 		next_downshift_state = ST_D_LOAD_SHIFT_LVR;
@@ -834,7 +835,7 @@ static void run_downshift_sm(void)
 		{
 			// done with preloading. Start allowing blips and move on to trying
 			// to exit the gear
-			safe_spark_cut(false);
+			safe_spark_cut(true);
 			begin_exit_gear_tick = HAL_GetTick();
 			next_downshift_state = ST_D_EXIT_GEAR;
 
@@ -856,7 +857,7 @@ static void run_downshift_sm(void)
 		// yet
 		set_downshift_solenoid(SOLENOID_ON);
 		set_clutch_solenoid(tcm_data.using_clutch ? SOLENOID_ON : SOLENOID_OFF);
-		safe_spark_cut(false);
+		safe_spark_cut(true);
 
 		if (!tcm_data.time_shift_only)
 		{
@@ -937,6 +938,7 @@ static void run_downshift_sm(void)
 		// and the RPM goes too high to enter the next gear
 		set_downshift_solenoid(SOLENOID_ON);
 		set_clutch_solenoid(tcm_data.using_clutch ? SOLENOID_ON : SOLENOID_OFF);
+		safe_spark_cut(true);
 
 		if (!tcm_data.time_shift_only)
 		{
@@ -954,7 +956,7 @@ static void run_downshift_sm(void)
 #endif
 				// the clutch lever has moved enough to finish the shift. Turn off
 				// any spark cutting and move on to finishing the shift
-				safe_spark_cut(false);
+				safe_spark_cut(true);
 				begin_extra_push_time_tick = HAL_GetTick();
 				next_downshift_state = ST_D_EXTRA_PUSH;
 
@@ -984,7 +986,7 @@ static void run_downshift_sm(void)
 				// to rev around and find a gear. Call this shift a failure
 				tcm_data.using_clutch = true;
 				set_clutch_solenoid(SOLENOID_ON);
-				safe_spark_cut(false);
+				safe_spark_cut(true);
 				next_downshift_state = ST_D_HOLD_CLUTCH;
 				begin_hold_clutch_tick = HAL_GetTick();
 
@@ -1005,7 +1007,7 @@ static void run_downshift_sm(void)
 			if (HAL_GetTick() - begin_enter_gear_tick > DOWNSHIFT_ENTER_GEAR_TIME_MS) {
 				begin_extra_push_time_tick = HAL_GetTick();
 				next_downshift_state = ST_D_EXTRA_PUSH;
-				safe_spark_cut(false);
+				safe_spark_cut(true);
 
 #ifdef SHIFT_DEBUG
 				// Debug
@@ -1027,7 +1029,7 @@ static void run_downshift_sm(void)
 		// mode to save air but would prefer not to fail shift
 		set_clutch_solenoid(SOLENOID_ON);
 		set_downshift_solenoid(SOLENOID_ON);
-		safe_spark_cut(false);
+		safe_spark_cut(true);
 
 		// check if we are done giving the extra time TODO Make sure this gets tuned (currently long apparently)
 		if (HAL_GetTick() - begin_hold_clutch_tick > DOWNSHIFT_FAIL_EXTRA_CLUTCH_HOLD)
@@ -1048,7 +1050,7 @@ static void run_downshift_sm(void)
 		break;
 
 	case ST_D_EXTRA_PUSH:
-		safe_spark_cut(false);
+		safe_spark_cut(true);
 
 		set_downshift_solenoid(SOLENOID_ON);
 
