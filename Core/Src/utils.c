@@ -62,12 +62,14 @@ void safe_spark_cut(bool state)
 	// dont allow spark cut while entering or exiting neutral or if we are already
 	// below the minimum allowable RPM
 
+#ifdef CAN_CHANGE_FROM_TIME_SHIFT
 	if (!tcm_data.time_shift_only && (tcm_data.target_gear == NEUTRAL
 			|| tcm_data.current_gear == NEUTRAL || tcm_data.current_RPM < MIN_SPARK_CUT_RPM))
 	{
 		set_spark_cut(false);
 		return;
 	}
+#endif
 
 	set_spark_cut(state);
 }
