@@ -80,7 +80,7 @@ void reach_target_RPM_spark_cut(uint32_t target_rpm)
 	// if the target RPM is too low, do not spark cut
 	if (target_rpm < MIN_SPARK_CUT_RPM)
 	{
-		safe_spark_cut(false);
+		safe_spark_cut(false); //seems redundant with your last else statement -- chris
 	}
 
 	// if the current RPM is higher than the target RPM, spark cut to reach it
@@ -443,6 +443,9 @@ float get_shift_pot_pos(void)
 	return shifterPosition_mm.data;
 }
 
+float get_loadcell_voltage(void){
+	return loadcell_voltage.data;
+}
 U32 get_ECU_RPM()
 {
 	return engineRPM_rpm.data;

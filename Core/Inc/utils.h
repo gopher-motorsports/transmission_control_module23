@@ -90,7 +90,7 @@ void set_spark_cut(bool state);
 float get_gear_pot_pos(void);
 float get_clutch_pot_pos(void);
 float get_shift_pot_pos(void);
-
+float get_loadcell_voltage(void);
 // Temp no gear pot functions
 bool clutch_open(void);
 void update_rpm_arr(void);

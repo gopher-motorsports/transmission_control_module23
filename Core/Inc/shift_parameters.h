@@ -14,13 +14,15 @@
 #define TARGET_RPM_TOLERANCE 0.03f
 
 // upshift defines
-#define UPSHIFT_SHIFT_LEVER_PRELOAD_TIME_MS(x) x ? 30 : 50 // long preload to get lots of load on the shift lever
+#define UPSHIFT_SHIFT_LEVER_PRELOAD_TIMEOUT_MS(x) x ? 30 : 50 //copied auto preload so that it will just fall back to time based, could be tuned
 #define UPSHIFT_EXIT_TIMEOUT_MS(x) x ? 25 : 40 // short time to exit. If the shift lever wasn't pushed far enough quickly it is probably stuck
 #define UPSHIFT_EXIT_SPARK_RETURN_MS(x) x ? 10 : 15// we dont want the spark return to be too long
 #define UPSHIFT_ENTER_TIMEOUT_MS(x) x ? 30 : 50 // data shows this does not take very long, so have a pretty short timeout here.
 #define UPSHIFT_EXIT_POS_MM 42.8f
 #define UPSHIFT_ENTER_POS_MM 47.3f
+
 // upshift time-based shifting
+#define UPSHIFT_SHIFT_LEVER_PRELOAD_TIME_MS(x) x ? 30 : 50 // long preload to get lots of load on the shift lever
 #define UPSHIFT_EXIT_GEAR_TIME_MS(x) x ? 30 : 50
 #define UPSHIFT_ENTER_GEAR_TIME_MS(x) x ? 40 : 60
 #define UPSHIFT_EXTRA_PUSH_TIME_MS(x) x ? 50 : 70
@@ -69,6 +71,10 @@
 #define GEAR_4_DISTANCE_mm 1.639 // 1.633 for down
 #define GEAR_5_DISTANCE_mm 1.270
 
+//Loadcell defines for upshifting & downshifting
+#define LOADCELL_PRELOAD_UPSHIFT_THRESH_V 1.85f   //resting 1.65 with +.2
+#define LOADCELL_PRELOAD_DOWNSHIFT_THRESH_V 1.45f //resting 1.65 with -.2
+#define LOADCELL_FORCE_DROP_THRESH_V .015f   //15mV
 // RPM cutoffs
 #define MAX_RPM 14000
 #define MIN_SPARK_CUT_RPM 3000

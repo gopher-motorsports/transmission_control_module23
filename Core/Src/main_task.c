@@ -11,7 +11,6 @@
 #include <stdbool.h>
 #include "shift_parameters.h"
 #include <string.h>
-#include <stdbool.h>
 #include <cmsis_os.h>
 
 // the HAL_CAN struct. This example only works for a single CAN bus
@@ -303,6 +302,7 @@ static void check_driver_inputs() {
 		}
 	}
 	last_downshift_button = DOWNSHIFT_BUTTON;
+
 }
 
 static void shifting_task() {
@@ -446,6 +446,9 @@ static void run_upshift_sm(void)
 	static uint32_t begin_extra_push_tick;
 	static uint32_t begin_exit_gear_spark_return_tick;
 
+	//12 bit adc so use 16bit to fit it loadcell data
+	static uint16_t loadcell_curr_max_voltage;
+	static bool loadcell_data_inaccurate_US;
 	// calculate the target RPM at the start of each cycle through the loop
 	tcm_data.target_RPM = calc_target_RPM(tcm_data.target_gear);
 
@@ -466,7 +469,7 @@ static void run_upshift_sm(void)
 
 		initial_gear = tcm_data.current_gear;
 		tcm_data.successful_shift = false;
-
+		loadcell_data_inaccurate_US = false;
 		set_upshift_solenoid(SOLENOID_ON); // start pushing upshift
 
 		// move on to waiting for the "preload" time to end
@@ -484,19 +487,37 @@ static void run_upshift_sm(void)
 
 	case ST_U_LOAD_SHIFT_LVR:
 		// we want to push on the solenoid, but not spark cut to preload the shift lever
-		set_upshift_solenoid(SOLENOID_ON);
+		set_upshift_solenoid(SOLENOID_ON); //this seems redundant --chris
 		safe_spark_cut(false);
 
-		// wait for the preload time to be over
-		if (HAL_GetTick() - begin_shift_tick > UPSHIFT_SHIFT_LEVER_PRELOAD_TIME_MS(shift_mode_2))
-		{
-			// preload time is over. Start spark cutting to disengage the
-			// gears and moving the RPM to match up with the next gearS
-			begin_exit_gear_tick = HAL_GetTick();
-			safe_spark_cut(true);
+		if (!tcm_data.time_shift_only){
+			if(get_loadcell_voltage() >  LOADCELL_PRELOAD_UPSHIFT_THRESH_V){
+				loadcell_curr_max_voltage = get_loadcell_voltage();
+				begin_exit_gear_tick = HAL_GetTick();
+				safe_spark_cut(true);
+				next_upshift_state = ST_U_EXIT_GEAR;
+			}
 
-			// move on to waiting to exit gear
-			next_upshift_state = ST_U_EXIT_GEAR;
+			else{
+				if (HAL_GetTick() - begin_shift_tick > UPSHIFT_SHIFT_LEVER_PRELOAD_TIMEOUT_MS(shift_mode_2)){
+							loadcell_data_inaccurate = true;
+							begin_exit_gear_tick = HAL_GetTick();
+							safe_spark_cut(true);
+							next_upshift_state = ST_U_EXIT_GEAR;
+				}
+			}
+		}
+
+		else{
+			// wait for the preload time to be over
+			if (HAL_GetTick() - begin_shift_tick > UPSHIFT_SHIFT_LEVER_PRELOAD_TIME_MS(shift_mode_2)){
+				// preload time is over. Start spark cutting to disengage the
+				// gears and moving the RPM to match up with the next gearS
+				begin_exit_gear_tick = HAL_GetTick();
+				safe_spark_cut(true);
+
+				// move on to waiting to exit gear
+				next_upshift_state = ST_U_EXIT_GEAR;
 
 #ifdef SHIFT_DEBUG
 			// Debug
@@ -506,8 +527,11 @@ static void run_upshift_sm(void)
 			printf("Distance from Last Occurrence: %lu //\n", HAL_GetTick() - lastShiftingChangeTick);
 			lastShiftingChangeTick = HAL_GetTick();
 #endif
+			}
 		}
+
 		break;
+
 
 	case ST_U_EXIT_GEAR: // **************************************************
 		// wait until the threshold for the lever leaving the last gear has
@@ -552,6 +576,15 @@ static void run_upshift_sm(void)
 				break;
 			}
 
+		if(!loadcell_data_inaccurate_US){
+			if(get_loadcell_voltage() > loadcell_curr_max_voltage){
+				loadcell_curr_max_voltage = get_loadcell_voltage();
+			}
+			else if(loadcell_curr_max_voltage - get_loadcell_voltage() > LOADCELL_FORCE_DROP_US_THRESH_V){
+				begin_enter_gear_tick = HAL_GetTick();
+			    next_upshift_state = ST_U_ENTER_GEAR;
+			}
+		}
 			// the shift lever has not moved far enough. Check if it has been
 			// long enough to timeout yet
 			if (HAL_GetTick() - begin_exit_gear_tick > UPSHIFT_EXIT_TIMEOUT_MS(shift_mode_2))
@@ -576,8 +609,8 @@ static void run_upshift_sm(void)
 		else
 		{
 			if (HAL_GetTick() - begin_exit_gear_tick > UPSHIFT_EXIT_GEAR_TIME_MS(shift_mode_2)) {
-				next_upshift_state = ST_U_ENTER_GEAR;
 				begin_enter_gear_tick = HAL_GetTick();
+				next_upshift_state = ST_U_ENTER_GEAR;
 
 #ifdef SHIFT_DEBUG
 				// Debug
@@ -679,6 +712,17 @@ static void run_upshift_sm(void)
 				lastShiftingChangeTick = HAL_GetTick();
 #endif
 				break;
+			}
+
+
+			if(!loadcell_data_inaccurate_US){
+				if(get_loadcell_voltage() > loadcell_curr_max_voltage){
+					loadcell_curr_max_voltage = get_loadcell_voltage();
+				}
+				else if(loadcell_curr_max_voltage - get_loadcell_voltage() > LOADCELL_FORCE_DROP_THRESH_V){
+					begin_extra_push_tick = HAL_GetTick();
+				    next_upshift_state = ST_U_EXTRA_PUSH;
+				}
 			}
 
 			// check if we are out of time for this state
@@ -785,6 +829,9 @@ static void run_downshift_sm(void)
 	static uint32_t begin_extra_push_time_tick;
 	static uint32_t begin_hold_clutch_tick;
 
+	static uint16_t loadcell_curr_min_voltage;
+	static bool loadcell_data_inaccurate_DS;
+
 	// calculate the target rpm at the start of each cycle
 	tcm_data.target_RPM = calc_target_RPM(tcm_data.target_gear);
 
@@ -836,22 +883,42 @@ static void run_downshift_sm(void)
 		// less about timing their blips perfectly because the TCM will do it
 		safe_spark_cut(true);
 
-		if ((HAL_GetTick() - begin_shift_tick > DOWNSHIFT_SHIFT_LEVER_PRELOAD_TIME_MS(shift_mode_2)))
-		{
-			// done with preloading. Start allowing blips and move on to trying
-			// to exit the gear
-			safe_spark_cut(false);
-			begin_exit_gear_tick = HAL_GetTick();
-			next_downshift_state = ST_D_EXIT_GEAR;
+		if (!tcm_data.time_shift_only){
+			if(get_loadcell_voltage() < LOADCELL_PRELOAD_DOWNSHIFT_THRESH_V){
+				loadcell_curr_min_voltage = get_loadcell_voltage();
+				begin_exit_gear_tick = HAL_GetTick();
+				safe_spark_cut(true);
+				next_upshift_state = ST_D_EXIT_GEAR;
+			}
+
+			else{
+				if (HAL_GetTick() - begin_shift_tick > UPSHIFT_SHIFT_LEVER_PRELOAD_TIMEOUT_MS(shift_mode_2)){
+							loadcell_data_inaccurate_DS = true;
+							begin_exit_gear_tick = HAL_GetTick();
+							safe_spark_cut(true);
+							next_upshift_state = ST_D_EXIT_GEAR;
+				}
+			}
+		}
+
+		else{
+			if ((HAL_GetTick() - begin_shift_tick > DOWNSHIFT_SHIFT_LEVER_PRELOAD_TIME_MS(shift_mode_2)))
+			{
+				// done with preloading. Start allowing blips and move on to trying
+				// to exit the gear
+				safe_spark_cut(false);
+				begin_exit_gear_tick = HAL_GetTick();
+				next_downshift_state = ST_D_EXIT_GEAR;
 
 #ifdef SHIFT_DEBUG
-			// Debug
-			printf("=== Downshift State: EXIT_GEAR\n");
-			printf("How: Preloading time completed\n");
-			printf("Current Tick: %lu\n", HAL_GetTick());
-			printf("Distance from Last Occurrence: %lu //\n", HAL_GetTick() - lastShiftingChangeTick);
-			lastShiftingChangeTick = HAL_GetTick();
+				// Debug
+				printf("=== Downshift State: EXIT_GEAR\n");
+				printf("How: Preloading time completed\n");
+				printf("Current Tick: %lu\n", HAL_GetTick());
+				printf("Distance from Last Occurrence: %lu //\n", HAL_GetTick() - lastShiftingChangeTick);
+				lastShiftingChangeTick = HAL_GetTick();
 #endif
+			}
 		}
 		break;
 
@@ -896,6 +963,15 @@ static void run_downshift_sm(void)
 				break;
 			}
 
+			if(!loadcell_data_inaccurate_DS){
+				if(get_loadcell_voltage() < loadcell_curr_min_voltage){
+					loadcell_curr_min_voltage = get_loadcell_voltage();
+				}
+				else if(get_loadcell_voltage() - loadcell_curr_min_voltage > LOADCELL_FORCE_DROP_THRESH_V){
+					begin_enter_gear_tick = HAL_GetTick();
+				    next_upshift_state = ST_U_ENTER_GEAR;
+				}
+			}
 			// check if this state has timed out
 			if (HAL_GetTick() - begin_exit_gear_tick > DOWNSHIFT_EXIT_TIMEOUT_MS(shift_mode_2))
 			{
@@ -979,6 +1055,16 @@ static void run_downshift_sm(void)
 				lastShiftingChangeTick = HAL_GetTick();
 #endif
 				break;
+			}
+
+			if(!loadcell_data_inaccurate_DS){
+				if(get_loadcell_voltage() < loadcell_curr_min_voltage){
+					loadcell_curr_min_voltage = get_loadcell_voltage();
+				}
+				else if(get_loadcell_voltage() - loadcell_curr_min_voltage > LOADCELL_FORCE_DROP_THRESH_V){
+					begin_enter_gear_tick = HAL_GetTick();
+					next_upshift_state = ST_D_EXTRA_PUSH;
+				}
 			}
 
 			// check for a timeout entering the gear
