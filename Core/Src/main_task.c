@@ -500,7 +500,7 @@ static void run_upshift_sm(void)
 
 			else{
 				if (HAL_GetTick() - begin_shift_tick > UPSHIFT_SHIFT_LEVER_PRELOAD_TIMEOUT_MS(shift_mode_2)){
-							loadcell_data_inaccurate = true;
+							loadcell_data_inaccurate_US = true;
 							begin_exit_gear_tick = HAL_GetTick();
 							safe_spark_cut(true);
 							next_upshift_state = ST_U_EXIT_GEAR;
@@ -580,7 +580,7 @@ static void run_upshift_sm(void)
 			if(get_loadcell_voltage() > loadcell_curr_max_voltage){
 				loadcell_curr_max_voltage = get_loadcell_voltage();
 			}
-			else if(loadcell_curr_max_voltage - get_loadcell_voltage() > LOADCELL_FORCE_DROP_US_THRESH_V){
+			else if(loadcell_curr_max_voltage - get_loadcell_voltage() > LOADCELL_FORCE_DROP_THRESH_V){
 				begin_enter_gear_tick = HAL_GetTick();
 			    next_upshift_state = ST_U_ENTER_GEAR;
 			}
